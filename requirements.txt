@@ -1,6 +1,7 @@
 # OmniOS Core Dependencies
 pyzmq>=24.0.0
-psutil>=5.9.0
+# psutil is excluded by default on Android Termux via setup.py, install manually on PC
+# psutil>=5.9.0
 
 # Windows Compatibility layer for ZeroMQ Asyncio
 tornado>=6.1

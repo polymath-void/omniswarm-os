@@ -21,7 +21,7 @@ This plan fundamentally resolves these architectural flaws without relying on di
 ### 1. Revert Event Loop Hacks
 We will restore the Windows default `ProactorEventLoop` to ensure the Execution Branch can spawn native subprocesses.
 
-#### [MODIFY] `omnios_cli.py` & `omniswarm-py/omniswarm_daemon.py`
+#### [MODIFY] `omnios_cli.py` & `omniswarm_py/omniswarm_daemon.py`
 Remove the brute-force policy override:
 ```python
 # DELETE THESE LINES
@@ -30,7 +30,7 @@ if sys.platform == 'win32':
 ```
 
 ### 2. PyZMQ Proactor Fix (Thread Isolation Strategy)
-#### [MODIFY] `omniswarm-py/mesh_broker.py`
+#### [MODIFY] `omniswarm_py/mesh_broker.py`
 We will rewrite `MCPMeshBroker` to spawn a dedicated polling thread.
 ```python
 import threading
@@ -60,7 +60,7 @@ class MCPMeshBroker:
 ```
 
 ### 3. SQLite Auto-Initialization
-#### [MODIFY] `omniswarm-py/holographic_ast.py`
+#### [MODIFY] `omniswarm_py/holographic_ast.py`
 Prevent the `sqlite3.OperationalError` from crashing the daemon on fresh clones by aggressively generating the expected schema before querying.
 
 ```python
@@ -81,12 +81,12 @@ Prevent the `sqlite3.OperationalError` from crashing the daemon on fresh clones 
 ```
 
 ### 4. PEP-668 / UV Environment Fallback
-#### [MODIFY] `omniswarm-py/kernel.py`
+#### [MODIFY] `omniswarm_py/kernel.py`
 Instead of blindly forcing `--break-system-packages` on PC, we will auto-generate an isolated `.omnios_venv` if the system is detected as externally managed, and proxy the daemon process into that virtual environment dynamically.
 
 ## Verification Plan
 ### Automated Tests
-* Manually run `python omniswarm-py/omniswarm_daemon.py` to ensure it boots without a Unicode error or a SQLite `no such table` crash on a completely blank repo.
+* Manually run `python omniswarm_py/omniswarm_daemon.py` to ensure it boots without a Unicode error or a SQLite `no such table` crash on a completely blank repo.
 * Trigger a background command via `omnios_cli.py compute_res_execute_bash '{"cmd": "echo test"}'` to guarantee that asynchronous subprocess I/O functions flawlessly alongside ZeroMQ without throwing a `NotImplementedError`.
 
 ### Manual Verification

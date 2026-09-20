@@ -22,7 +22,7 @@ During the execution of a multi-stage web scraping pipeline, the Swarm encounter
 The root cause of this failure lies in the ZeroMQ socket pattern currently implemented in `mesh_broker.py`:
 
 ```python
-# omniswarm-py/mesh_broker.py
+# omniswarm_py/mesh_broker.py
 self.rpc_server = self.ctx.socket(zmq.REP)
 ```
 

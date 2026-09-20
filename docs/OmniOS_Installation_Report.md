@@ -3,7 +3,7 @@
 While attempting to install and boot the OmniOS root kernel (`omniswarm-os`) on a Windows system, several technical hurdles were encountered. Here is a detailed breakdown of the issues faced and how they were resolved:
 
 ## 1. Undocumented Dependencies
-The repository lacks a `requirements.txt` file or explicit setup instructions for dependencies. When attempting to boot the daemon via `python omniswarm-py/omniswarm_daemon.py`, it immediately crashed due to missing modules (specifically `zmq`).
+The repository lacks a `requirements.txt` file or explicit setup instructions for dependencies. When attempting to boot the daemon via `python omniswarm_py/omniswarm_daemon.py`, it immediately crashed due to missing modules (specifically `zmq`).
 * **Resolution**: Manually installed the `pyzmq` package.
 
 ## 2. Python Environment Locks (PEP 668)

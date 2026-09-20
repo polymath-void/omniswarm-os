@@ -28,7 +28,7 @@ OmniOS runs via a centralized root daemon (`omniswarm_daemon.py`) that manages t
 2. **Boot the Root Kernel**
    ```bash
    # Run the daemon in the background to initialize the ZeroMQ Mesh
-   nohup python3 omniswarm-py/omniswarm_daemon.py > omniswarm.log 2>&1 &
+   nohup python3 omniswarm_py/omniswarm_daemon.py > omniswarm.log 2>&1 &
    ```
 
 3. **Deploying Agents via CLI**

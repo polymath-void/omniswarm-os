@@ -9,10 +9,10 @@ trigger: always_on
 When operating within the `omniswarm-os` repository on a Windows host, you MUST adhere to the following operational guidelines to prevent false failures and debugging loops:
 
 1. **Bootloader Process Detachment (os.execv)**:
-   - When running `python omniswarm-py/omniswarm_daemon.py` or `python omnios_cli.py` natively on Windows, the `bootloader.py` script automatically bootstraps an `.omnios_venv` to bypass `uv` and PEP-668 environment locks.
+   - When running `python omniswarm_py/omniswarm_daemon.py` or `python omnios_cli.py` natively on Windows, the `bootloader.py` script automatically bootstraps an `.omnios_venv` to bypass `uv` and PEP-668 environment locks.
    - It then uses `os.execv()` to hand off execution to the virtual environment. **On Windows, this detaches the process** and instantly returns exit code 0 to the original terminal, swallowing all `stdout`/`stderr` from the child process.
    - **Do NOT assume the daemon crashed.** The daemon is running silently in the background as an orphaned process. 
-   - **To see output natively and capture logs:** Execute scripts directly using the virtual environment binary: `.omnios_venv\Scripts\python.exe omniswarm-py\omniswarm_daemon.py` or `.omnios_venv\Scripts\python.exe omnios_cli.py <args>`.
+   - **To see output natively and capture logs:** Execute scripts directly using the virtual environment binary: `.omnios_venv\Scripts\python.exe omniswarm_py\omniswarm_daemon.py` or `.omnios_venv\Scripts\python.exe omnios_cli.py <args>`.
 
 2. **PyZMQ Tornado Warnings**:
    - When running the CLI or daemon directly from the `.omnios_venv`, you will see a `RuntimeWarning` from `zmq.asyncio` regarding the `Proactor event loop` missing the `add_reader` family of methods.

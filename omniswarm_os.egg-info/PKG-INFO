@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: omniswarm-os
+Version: 1.0.0
+Summary: The Absolute Root Kernel for Edge-First AI Swarms
+Author: Polymath-Void
+Requires-Python: >=3.10
+Requires-Dist: pyzmq>=24.0.0
+Requires-Dist: tornado>=6.1
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

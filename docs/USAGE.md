@@ -7,7 +7,7 @@ OmniSwarm-OS is meant to run entirely in the background, exactly like `polymath-
 
 Whenever you start a Termux session on your Android device (or your PC), you boot the daemon:
 ```bash
-python3 ~/Projects/omniswarm-os/omniswarm-py/omniswarm_daemon.py &
+python3 ~/Projects/omniswarm-os/omniswarm_py/omniswarm_daemon.py &
 ```
 Once booted, the device becomes a "Node" in your local P2P Mesh. If you boot it on your phone and your tablet, they instantly discover each other via mDNS.
 

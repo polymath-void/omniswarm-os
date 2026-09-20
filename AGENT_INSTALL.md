@@ -13,7 +13,7 @@ pip install -e .
 ## 2. Booting the OS Kernel
 You must boot the OS Daemon in the background before interacting with the swarm:
 ```bash
-python3 omniswarm-py/omniswarm_daemon.py &
+python3 omniswarm_py/omniswarm_daemon.py &
 ```
 The daemon will automatically map local projects (`polymath-nodeos`, `ComputeRes`, `polymath-jage`) into its memory space.
 

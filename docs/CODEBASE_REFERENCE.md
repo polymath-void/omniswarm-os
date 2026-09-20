@@ -7,7 +7,7 @@ This document provides an exhaustive map of the OmniOS source code, detailing ev
 ## Directory Structure
 ```text
 omniswarm-os/
-├── omniswarm-py/
+├── omniswarm_py/
 │   ├── omniswarm_daemon.py
 │   ├── kernel.py
 │   ├── mesh_broker.py

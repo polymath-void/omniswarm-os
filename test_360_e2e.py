@@ -16,7 +16,7 @@ import subprocess
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(SCRIPT_DIR, "omniswarm-py"))
+sys.path.append(os.path.join(SCRIPT_DIR, "omniswarm_py"))
 from agent_harness import OmniOSAgentHarness
 
 async def run_360_test():
@@ -26,7 +26,7 @@ async def run_360_test():
     
     print("[Test] 1/7: Booting OmniOS Root Kernel...")
     daemon_proc = subprocess.Popen(
-        [sys.executable, os.path.join(SCRIPT_DIR, "omniswarm-py", "omniswarm_daemon.py")],
+        [sys.executable, os.path.join(SCRIPT_DIR, "omniswarm_py", "omniswarm_daemon.py")],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

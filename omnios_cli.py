@@ -15,7 +15,7 @@ if sys.stdout and sys.stdout.encoding.lower() != 'utf-8':
 
 # Safely resolve the correct absolute path to the module
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(SCRIPT_DIR, "omniswarm-py"))
+sys.path.append(os.path.join(SCRIPT_DIR, "omniswarm_py"))
 
 from agent_harness import OmniOSAgentHarness
 
