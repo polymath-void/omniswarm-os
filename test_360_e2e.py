@@ -1,3 +1,17 @@
+import sys
+import asyncio
+
+# [Windows Compatibility Patch] Force UTF-8 for Emojis
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
+# [Windows Compatibility Patch] Fix PyZMQ ProactorEventLoop Crash
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import asyncio
 import os
 import sys

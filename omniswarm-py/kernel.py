@@ -52,6 +52,13 @@ class OmniOSRootKernel:
         # 1. Check/Symlink NodeOS database
         self._symlink_from_umbrella("agy_nodeos.db")
         if not shutil.which("nodeos"):
+            try:
+                import zmq
+            except ImportError:
+                print(f"[{self.node_id}] Installing Core Python Dependencies (pyzmq, psutil, tornado)...")
+                req_file = os.path.join(self.parent_root, "omniswarm-os", "requirements.txt")
+                if os.path.exists(req_file):
+                    self._run_cmd(f"pip install -r {req_file}" + (" --break-system-packages" if self._is_termux() else ""), "OmniOS Core Requirements")
             pip_cmd = "pip install polymath-nodeos" + (" --break-system-packages" if self._is_termux() else "")
             self._run_cmd(pip_cmd, "polymath-nodeos (Cognition Branch)")
             
