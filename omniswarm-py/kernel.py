@@ -102,6 +102,11 @@ class OmniOSRootKernel:
                 return self.intent_gc.sweep_completed_intents()
             if tool_name == "compute_res_execute_bash" and "Execution" in self.branches:
                 return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "EXEC_BASH", "args": args})
+            if tool_name == "query_holographic_ast" and "Cognition" in self.branches:
+                # Wrap sync call in asyncio to thread or execute directly
+                return {"status": "success", "results": self.branches["Cognition"].semantic_search(args.get("intent", ""), args.get("top_k", 3))}
+            if tool_name == "jage_sync_ast" and "Time" in self.branches:
+                return await self.branches["Time"].version_ast_state(args.get("file_path", ""))
             return await original_handler(tool_name, args)
         self.mesh.handle_incoming_request = hooked_handler
 
