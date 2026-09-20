@@ -1,4 +1,14 @@
 {
   "status": "idle",
-  "intents": []
+  "intents": [
+    {
+      "agent_id": "RealWorldAgent",
+      "status": "suspended_by_agent",
+      "saved_state": {
+        "status": "experiment_complete",
+        "learned_nodes": 2
+      },
+      "timestamp": 1789893019.3288572
+    }
+  ]
 }

@@ -1,0 +1,40 @@
+{
+    "metadata": {
+        "type": "ClassDef",
+        "name": "MCPMeshBroker",
+        "hash": "f49e9a037110b1f0001efd118009947ef6fcbd8fbe46c0bc739c1a442e4be695",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/omniswarm-py/mesh_broker.py",
+        "line_number": 9,
+        "calls": [
+            "create_subprocess_shell",
+            "encode",
+            "handle_incoming_request",
+            "loads",
+            "keys",
+            "list",
+            "sleep",
+            "str",
+            "setsockopt_string",
+            "recv_multipart",
+            "getcwd",
+            "dumps",
+            "print",
+            "_listen_for_discovery",
+            "_listen_for_rpc",
+            "create_task",
+            "broadcast_loop",
+            "connect",
+            "decode",
+            "get",
+            "instance",
+            "socket",
+            "bind",
+            "send_multipart",
+            "_process_and_reply",
+            "len",
+            "communicate"
+        ]
+    },
+    "source": "class MCPMeshBroker:\n    def __init__(self, node_id: str):\n        self.node_id = node_id\n        self.local_tools: Dict[str, dict] = {}\n        self.mesh_peers: Dict[str, dict] = {}\n        \n        self.ctx = zmq.asyncio.Context.instance()\n        \n        # UPGRADE: REQ/REP replaced with ROUTER for true async multiplexing\n        self.rpc_server = self.ctx.socket(zmq.ROUTER)\n        self.rpc_port = 5565\n        self.rpc_server.bind(f\"tcp://*:{self.rpc_port}\")\n        \n        self.discovery_pub = self.ctx.socket(zmq.PUB)\n        self.discovery_pub.bind(\"tcp://*:5566\")\n        \n        self.discovery_sub = self.ctx.socket(zmq.SUB)\n        self.discovery_sub.connect(\"tcp://127.0.0.1:5566\")\n        self.discovery_sub.setsockopt_string(zmq.SUBSCRIBE, \"OMNI_DISCOVERY\")\n        self.discovery_sub.setsockopt_string(zmq.SUBSCRIBE, \"OS_EVENT\")\n        \n        print(f\"[{self.node_id}] ZMQ Asynchronous ROUTER Engine Online. RPC Port: {self.rpc_port}\")\n\n    def register_tool(self, name: str, schema: dict):\n        self.local_tools[name] = schema\n\n    async def _listen_for_rpc(self):\n        \"\"\"Asynchronous ROUTER listener. Multiplexes incoming tasks without blocking.\"\"\"\n        while True:\n            try:\n                # ROUTER receives [identity, empty (for REQ clients), payload]\n                msg_parts = await self.rpc_server.recv_multipart()\n                \n                if len(msg_parts) >= 3:\n                    identity = msg_parts[0]\n                    empty = msg_parts[1]\n                    payload_str = msg_parts[2].decode()\n                    \n                    # Spawn a background task for each request to prevent deadlocks\n                    asyncio.create_task(self._process_and_reply(identity, empty, payload_str))\n            except Exception as e:\n                pass\n\n    async def _process_and_reply(self, identity: bytes, empty: bytes, payload_str: str):\n        \"\"\"Processes the request natively and returns the payload via ROUTER.\"\"\"\n        try:\n            payload = json.loads(payload_str)\n            tool_name = payload.get(\"tool\")\n            args = payload.get(\"args\", {})\n            \n            response = await self.handle_incoming_request(tool_name, args)\n            \n            # Send back to the exact client identity\n            await self.rpc_server.send_multipart([identity, empty, json.dumps(response).encode()])\n        except Exception as e:\n            await self.rpc_server.send_multipart([identity, empty, json.dumps({\"status\": \"error\", \"message\": str(e)}).encode()])\n\n    async def _listen_for_discovery(self):\n        while True:\n            try:\n                topic, msg = await self.discovery_sub.recv_multipart()\n                if topic == b\"OMNI_DISCOVERY\":\n                    peer_info = json.loads(msg.decode())\n                    if peer_info[\"node_id\"] != self.node_id:\n                        self.mesh_peers[peer_info[\"node_id\"]] = peer_info\n            except Exception:\n                pass\n\n    async def start_mdns_broadcast(self):\n        asyncio.create_task(self._listen_for_rpc())\n        asyncio.create_task(self._listen_for_discovery())\n        \n        async def broadcast_loop():\n            while True:\n                payload = json.dumps({\n                    \"node_id\": self.node_id, \n                    \"rpc_port\": self.rpc_port, \n                    \"tools\": list(self.local_tools.keys())\n                })\n                await self.discovery_pub.send_multipart([b\"OMNI_DISCOVERY\", payload.encode()])\n                await asyncio.sleep(5)\n                \n        asyncio.create_task(broadcast_loop())\n\n    async def handle_incoming_request(self, tool_name: str, args: dict) -> dict:\n        print(f\"[{self.node_id}] Real Mesh Executing -> Tool: {tool_name} | Args: {args}\")\n        if tool_name not in self.local_tools:\n            return {\"status\": \"error\", \"message\": f\"Tool {tool_name} missing.\"}\n        try:\n            if tool_name == \"compute_res_execute_bash\":\n                # Ensure execution is non-blocking to protect the asyncio loop!\n                cmd = args.get(\"cmd\", \"\")\n                exec_cwd = args.get(\"cwd\", os.getcwd())\n                process = await asyncio.create_subprocess_shell(\n                    cmd, cwd=exec_cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE\n                )\n                stdout, stderr = await process.communicate()\n                return {\"status\": \"success\", \"stdout\": stdout.decode(), \"stderr\": stderr.decode()}\n            elif tool_name == \"ping_edge_node\":\n                return {\"status\": \"success\", \"message\": \"pong\"}\n            return {\"status\": \"success\", \"result\": f\"Executed natively: {tool_name}\"}\n        except Exception as e:\n            return {\"status\": \"error\", \"message\": str(e)}",
+    "skeleton": "class MCPMeshBroker:\n    pass"
+}

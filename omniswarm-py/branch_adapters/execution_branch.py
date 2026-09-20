@@ -39,7 +39,7 @@ class ComputeResExecutionBranch:
         await dealer.send(req)
         
         try:
-            resp = await asyncio.wait_for(dealer.recv(), timeout=5.0)
+            resp = await asyncio.wait_for(dealer.recv(), timeout=60.0)
             dealer.close()
             return json.loads(resp.decode())
         except asyncio.TimeoutError:

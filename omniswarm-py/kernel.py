@@ -1,4 +1,5 @@
 import os
+import json
 import sys
 import asyncio
 import subprocess
@@ -9,6 +10,7 @@ from holographic_ast import HolographicASTGraph
 from void_governor import VoidGovernor
 from fall_detector import SystemFallDetector
 from intent_gc import IntentGarbageCollector
+from event_ledger import EventLedger
 
 class OmniOSRootKernel:
     def __init__(self, workspace_root=None):
@@ -86,8 +88,12 @@ class OmniOSRootKernel:
             )
 
     def register_mesh_tools(self):
+        db_path = os.path.join(self.workspace_root, "agy_nodeos.db")
+        self.event_ledger = EventLedger(db_path)
+        
         self.mesh.register_tool(name="ping_edge_node", schema={"returns": "pong"})
         self.mesh.register_tool(name="trigger_intent_gc", schema={"description": "Cleans up completed intents instantly."})
+        self.mesh.register_tool(name="query_os_events", schema={"parameters": {"since_timestamp": "float"}})
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
@@ -98,6 +104,8 @@ class OmniOSRootKernel:
             
         original_handler = self.mesh.handle_incoming_request
         async def hooked_handler(tool_name: str, args: dict):
+            if tool_name == "query_os_events":
+                return {"status": "success", "events": self.event_ledger.query_events_since(args.get("since_timestamp", 0.0))}
             if tool_name == "trigger_intent_gc":
                 return self.intent_gc.sweep_completed_intents()
             if tool_name == "compute_res_execute_bash" and "Execution" in self.branches:
@@ -115,7 +123,13 @@ class OmniOSRootKernel:
         self.intent_gc.sweep_completed_intents()
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
-            asyncio.create_task(self.branches["Cognition"].generate_embeddings_background_task())
+            async def notify_mesh(count):
+                payload_dict = {"event": "AST_SYNC_COMPLETE", "nodes_mapped": count}
+                self.event_ledger.log_event("AST_SYNC_COMPLETE", payload_dict)
+                
+                payload = json.dumps(payload_dict).encode()
+                await self.mesh.discovery_pub.send_multipart([b"OS_EVENT", payload])
+            asyncio.create_task(self.branches["Cognition"].generate_embeddings_background_task(on_batch_complete=notify_mesh))
         if "Execution" in self.branches and self.branches["Execution"]:
             await self.branches["Execution"].boot_branch()
         if "Time" in self.branches and self.branches["Time"]:

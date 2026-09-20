@@ -25,7 +25,7 @@ class HolographicASTGraph:
             return 0.0
         return dot_product / (mag1 * mag2)
 
-    async def generate_embeddings_background_task(self):
+    async def generate_embeddings_background_task(self, on_batch_complete=None):
         """Scans the NodeOS db and generates embeddings asynchronously without spiking CPU."""
         if not os.path.exists(self.db_path):
             return
@@ -55,6 +55,7 @@ class HolographicASTGraph:
                 
             conn.commit()
             # Yield control to the asyncio event loop (throttles CPU usage)
+            if on_batch_complete: await on_batch_complete(len(unindexed))
             await asyncio.sleep(0.5)
 
         conn.close()

@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "type": "AsyncFunctionDef",
+        "name": "swarm_experiment",
+        "hash": "12cd14a718aead74a6906420b7f7aad4d7aa750c6590dcd6db3fff86e54e61e2",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/agent_demo.py",
+        "line_number": 10,
+        "calls": [
+            "suspend_intent_safely",
+            "print",
+            "OmniOSAgentHarness",
+            "strip",
+            "len",
+            "execute_in_swarm",
+            "get"
+        ]
+    },
+    "source": "async def swarm_experiment():\n    print(\"\ud83e\udd16 Agent initializing...\")\n    async with OmniOSAgentHarness(agent_id=\"RealWorldAgent\") as harness:\n        print(\"\ud83e\udde0 Querying Swarm Cognition Branch for 'Wasmtime' knowledge...\")\n        ast_result = await harness.execute_in_swarm(\"query_holographic_ast\", {\"intent\": \"Wasmtime execution environment\", \"top_k\": 2})\n        \n        print(\"\\n\ud83d\udd0d AST Found:\")\n        for res in ast_result.get(\"results\", []):\n            print(f\"  - {res['type']}: {res['name']} (Score: {res['similarity']})\")\n            \n        print(\"\\n\u26a1 Delegating task to ComputeRes Execution Branch...\")\n        bash_cmd = \"echo 'Swarm analyzed AST and successfully dispatched to Wasmtime execution!' > swarm_success.txt && cat swarm_success.txt\"\n        exec_result = await harness.execute_in_swarm(\"compute_res_execute_bash\", {\"cmd\": bash_cmd})\n        \n        print(f\"\\n\u2705 Execution Branch Response: {exec_result.get('stdout', '').strip()}\")\n        print(\"\\n\ud83d\udcbe Suspending intent back to OS...\")\n        await harness.suspend_intent_safely({\"status\": \"experiment_complete\", \"learned_nodes\": len(ast_result.get(\"results\", []))})\n        print(\"\ud83c\udf89 Experiment Concluded.\")",
+    "skeleton": "async def swarm_experiment():\n    pass"
+}

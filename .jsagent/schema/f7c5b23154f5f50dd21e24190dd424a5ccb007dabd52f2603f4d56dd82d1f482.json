@@ -1,0 +1,25 @@
+{
+    "metadata": {
+        "type": "ClassDef",
+        "name": "EventLedger",
+        "hash": "f7c5b23154f5f50dd21e24190dd424a5ccb007dabd52f2603f4d56dd82d1f482",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/omniswarm-py/event_ledger.py",
+        "line_number": 5,
+        "calls": [
+            "append",
+            "_get_connection",
+            "dumps",
+            "fetchall",
+            "cursor",
+            "execute",
+            "connect",
+            "time",
+            "_init_table",
+            "loads",
+            "commit",
+            "close"
+        ]
+    },
+    "source": "class EventLedger:\n    def __init__(self, db_path: str):\n        self.db_path = db_path\n        self._init_table()\n\n    def _get_connection(self):\n        return sqlite3.connect(self.db_path)\n\n    def _init_table(self):\n        conn = self._get_connection()\n        cursor = conn.cursor()\n        cursor.execute(\"\"\"\n            CREATE TABLE IF NOT EXISTS os_events (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                timestamp REAL,\n                event_type TEXT,\n                payload TEXT\n            )\n        \"\"\")\n        conn.commit()\n        conn.close()\n\n    def log_event(self, event_type: str, payload: dict):\n        conn = self._get_connection()\n        cursor = conn.cursor()\n        cursor.execute(\n            \"INSERT INTO os_events (timestamp, event_type, payload) VALUES (?, ?, ?)\",\n            (time.time(), event_type, json.dumps(payload))\n        )\n        conn.commit()\n        conn.close()\n\n    def query_events_since(self, since_timestamp: float) -> list:\n        conn = self._get_connection()\n        cursor = conn.cursor()\n        cursor.execute(\n            \"SELECT timestamp, event_type, payload FROM os_events WHERE timestamp > ? ORDER BY timestamp ASC\",\n            (since_timestamp,)\n        )\n        rows = cursor.fetchall()\n        conn.close()\n        \n        events = []\n        for ts, event_type, payload_str in rows:\n            events.append({\n                \"timestamp\": ts,\n                \"event_type\": event_type,\n                \"payload\": json.loads(payload_str)\n            })\n        return events",
+    "skeleton": "class EventLedger:\n    pass"
+}

@@ -1,0 +1,21 @@
+{
+    "metadata": {
+        "type": "AsyncFunctionDef",
+        "name": "main",
+        "hash": "b1307c7f16ad06a2350cb6a0adf292a7a009a97df7a86d1be55b174e7aa51a39",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/omnios_cli.py",
+        "line_number": 10,
+        "calls": [
+            "get_llm_tool_schemas",
+            "exit",
+            "dumps",
+            "print",
+            "OmniOSAgentHarness",
+            "len",
+            "loads",
+            "execute_in_swarm"
+        ]
+    },
+    "source": "async def main():\n    if len(sys.argv) < 2:\n        print(\"Usage: python3 omnios_cli.py <command> [args_json]\")\n        print(\"Available commands: list_tools, execute <tool_name> <args_json>\")\n        sys.exit(1)\n        \n    command = sys.argv[1]\n    \n    async with OmniOSAgentHarness(agent_id=\"Antigravity_CLI\") as harness:\n        if command == \"list_tools\":\n            schemas = harness.get_llm_tool_schemas()\n            print(json.dumps(schemas, indent=2))\n            \n        elif command == \"execute\":\n            if len(sys.argv) < 4:\n                print(\"Usage: python3 omnios_cli.py execute <tool_name> <args_json>\")\n                sys.exit(1)\n            tool_name = sys.argv[2]\n            try:\n                args = json.loads(sys.argv[3])\n            except Exception as e:\n                print(f\"Error parsing args_json: {e}\")\n                sys.exit(1)\n                \n            res = await harness.execute_in_swarm(tool_name, args, timeout=10.0)\n            print(json.dumps(res, indent=2))\n        else:\n            print(f\"Unknown command: {command}\")\n            sys.exit(1)",
+    "skeleton": "async def main():\n    pass"
+}

@@ -48,14 +48,27 @@ class OmniHubRegistry:
                 
             self._run_cmd(pip_cmd, "polymath-nodeos (PyPI)")
             
-        # 2. Polymath-Jage (NPM)
-        if not shutil.which("jage") and not os.path.exists(os.path.join(self.workspace_root, "polymath-jage")):
-            self._run_cmd("npm install -g polymath-jage", "polymath-jage (NPM)")
+        # 2. Polymath-Jage (NPM or local)
+        jage_path = os.path.join(self.workspace_root, "polymath-jage")
+        parent_jage = os.path.join(os.path.dirname(self.workspace_root), "polymath-jage")
+        
+        if not os.path.exists(jage_path):
+            if os.path.exists(parent_jage):
+                print(f"[{self.node_id}] Found polymath-jage in parent directory. Symlinking...")
+                os.symlink(parent_jage, jage_path)
+            elif not shutil.which("jage"):
+                self._run_cmd("npm install -g polymath-jage", "polymath-jage (NPM)")
             
-        # 3. ComputeRes (Git)
+        # 3. ComputeRes (Git or local)
         compute_res_path = os.path.join(self.workspace_root, "ComputeRes")
+        parent_compute_res = os.path.join(os.path.dirname(self.workspace_root), "ComputeRes")
+        
         if not os.path.exists(compute_res_path):
-            self._run_cmd(f"git clone https://github.com/polymath-void/ComputeRes.git {compute_res_path}", "ComputeRes (Git)")
+            if os.path.exists(parent_compute_res):
+                print(f"[{self.node_id}] Found ComputeRes in parent directory. Symlinking...")
+                os.symlink(parent_compute_res, compute_res_path)
+            else:
+                self._run_cmd(f"git clone https://github.com/polymath-void/ComputeRes.git {compute_res_path}", "ComputeRes (Git)")
 
     def _discover_workspace_capabilities(self):
         db_path = os.path.join(self.workspace_root, "agy_nodeos.db")

@@ -84,7 +84,8 @@ class OmniOSAgentHarness:
                         "properties": {
                             "cmd": {"type": "string", "description": "The bash command to execute"}
                         },
-                        "required": ["cmd"]
+                        "required": ["cmd"],
+                        "cwd": {"type": "string", "description": "Optional working directory"}
                     }
                 }
             }
@@ -97,6 +98,8 @@ class OmniOSAgentHarness:
         if not self._connected:
             await self.connect()
             
+        if tool_name == "compute_res_execute_bash" and "cwd" not in args:
+            args["cwd"] = os.getcwd()
         payload = json.dumps({"agent_id": self.agent_id, "tool": tool_name, "args": args})
         await self.req_socket.send_string(payload)
         
