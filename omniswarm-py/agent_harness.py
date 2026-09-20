@@ -25,10 +25,11 @@ class OmniOSAgentHarness:
     LLM-native capability discovery (JSON Schemas), and asynchronous event subscriptions.
     """
     
-    def __init__(self, agent_id: str, workspace_root: Optional[str] = None):
+    def __init__(self, agent_id: str, workspace_root: Optional[str] = None, host: str = "127.0.0.1"):
         self.agent_id = agent_id
         self.workspace_root = workspace_root or os.getcwd()
         self.workflow_file = os.path.join(self.workspace_root, "workflow.json")
+        self.host = host
         
         # Optimized ZMQ Context Pooling
         self.ctx = zmq.asyncio.Context.instance()
@@ -38,20 +39,21 @@ class OmniOSAgentHarness:
 
     async def __aenter__(self):
         """Context manager support for clean socket initialization and teardown."""
-        await self.connect()
+        await self.connect(host=self.host)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
 
-    async def connect(self, host: str = "127.0.0.1", rpc_port: int = 5565, pub_port: int = 5567):
+    async def connect(self, host: Optional[str] = None, rpc_port: int = 5565, pub_port: int = 5567):
         """Establishes optimized, non-blocking connections to the OmniOS Kernel."""
+        target_host = host or self.host
         if not self._connected:
             self.req_socket = self.ctx.socket(zmq.REQ)
-            self.req_socket.connect(f"tcp://{host}:{rpc_port}")
+            self.req_socket.connect(f"tcp://{target_host}:{rpc_port}")
             
             self.sub_socket = self.ctx.socket(zmq.SUB)
-            self.sub_socket.connect(f"tcp://{host}:{pub_port}")
+            self.sub_socket.connect(f"tcp://{target_host}:{pub_port}")
             
             self._connected = True
             print(f"[Harness:{self.agent_id}] Linked to OmniOS Matrix.")
