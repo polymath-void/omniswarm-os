@@ -1,0 +1,24 @@
+{
+    "metadata": {
+        "type": "ClassDef",
+        "name": "IntentGarbageCollector",
+        "hash": "4a494a32ab6c4a4b98bf3e608cc29732a2075bbcefa251840645ea5fa85bac0a",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/omniswarm-py/intent_gc.py",
+        "line_number": 5,
+        "calls": [
+            "dump",
+            "_sweep_completed_intents",
+            "print",
+            "join",
+            "open",
+            "load",
+            "len",
+            "replace",
+            "exists",
+            "get",
+            "sleep"
+        ]
+    },
+    "source": "class IntentGarbageCollector:\n    \"\"\"\n    Background worker that prevents workflow.json from cluttering.\n    Automatically deletes intents marked as 'completed' so agents \n    only ever read active or suspended tasks.\n    \"\"\"\n    def __init__(self, workspace_root):\n        self.workflow_path = os.path.join(workspace_root, \"workflow.json\")\n\n    async def run_gc_loop(self):\n        print(\"[IntentGC] Garbage Collector Online. Keeping workflow.json clean.\")\n        while True:\n            try:\n                self._sweep_completed_intents()\n            except Exception as e:\n                pass\n            await asyncio.sleep(30)  # Run a sweep every 30 seconds\n\n    def _sweep_completed_intents(self):\n        if not os.path.exists(self.workflow_path):\n            return\n\n        try:\n            with open(self.workflow_path, 'r') as f:\n                data = json.load(f)\n\n            if \"intents\" not in data or not data[\"intents\"]:\n                return\n\n            original_count = len(data[\"intents\"])\n            # Keep only intents that are NOT completed\n            active_intents = [\n                intent for intent in data[\"intents\"] \n                if intent.get(\"status\") != \"completed\"\n            ]\n\n            # If we cleaned something up, write it back\n            if len(active_intents) < original_count:\n                data[\"intents\"] = active_intents\n                \n                # Atomic write\n                tmp_file = self.workflow_path + \".tmp\"\n                with open(tmp_file, 'w') as f:\n                    json.dump(data, f, indent=2)\n                os.replace(tmp_file, self.workflow_path)\n                \n                cleared = original_count - len(active_intents)\n                print(f\"\\n[IntentGC] \ud83e\uddf9 Auto-deleted {cleared} completed intent(s) to free up agent context window.\")\n\n        except json.JSONDecodeError:\n            pass",
+    "skeleton": "class IntentGarbageCollector:\n    pass"
+}

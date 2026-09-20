@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "type": "ClassDef",
+        "name": "VoidGovernor",
+        "hash": "ab5f7b73c7c1bf5202ef2cc04e2edfacd5a60e5291df91e4af08376031439858",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/omniswarm-py/void_governor.py",
+        "line_number": 7,
+        "calls": [
+            "expanduser",
+            "get_available_memory_percent",
+            "dump",
+            "int",
+            "_get_memory_stats",
+            "print",
+            "sleep",
+            "open",
+            "load",
+            "split",
+            "startswith",
+            "exists",
+            "virtual_memory",
+            "time",
+            "callback_on_suspend"
+        ]
+    },
+    "source": "class VoidGovernor:\n    def __init__(self, critical_memory_threshold_percent: float = 15.0):\n        self.threshold = critical_memory_threshold_percent\n        self.is_suspended = False\n        \n        # Determine Platform Strategy\n        self.platform = sys.platform\n        self.has_psutil = False\n        try:\n            import psutil\n            self.has_psutil = True\n            print(f\"[VoidGovernor] Platform: {self.platform} | Engine: psutil\")\n        except ImportError:\n            engine = \"/proc/meminfo\" if self.platform.startswith(\"linux\") or self.platform == \"android\" else \"Fallback (Unmonitored)\"\n            print(f\"[VoidGovernor] Platform: {self.platform} | Engine: {engine}\")\n            \n        print(f\"[VoidGovernor] Initialized. Critical memory threshold set to {self.threshold}%\")\n\n    def _get_memory_stats(self) -> dict:\n        \"\"\"Cross-platform memory monitor.\"\"\"\n        stats = {\"MemTotal\": 100, \"MemAvailable\": 100} # Safe fallback\n        \n        # Strategy 1: psutil (Works natively on Windows, macOS, Linux)\n        if self.has_psutil:\n            import psutil\n            mem = psutil.virtual_memory()\n            return {\"MemTotal\": mem.total, \"MemAvailable\": mem.available}\n            \n        # Strategy 2: Native Linux/Android (/proc/meminfo)\n        if self.platform.startswith(\"linux\") or self.platform == \"android\":\n            try:\n                with open('/proc/meminfo', 'r') as f:\n                    for line in f:\n                        if line.startswith('MemTotal:'):\n                            stats[\"MemTotal\"] = int(line.split()[1]) * 1024\n                        elif line.startswith('MemAvailable:'):\n                            stats[\"MemAvailable\"] = int(line.split()[1]) * 1024\n                        if stats[\"MemTotal\"] != 100 and stats[\"MemAvailable\"] != 100:\n                            break\n            except Exception:\n                pass\n                \n        # Strategy 3: macOS/Windows fallback without psutil (Assume unlimited memory to prevent false crashes)\n        return stats\n\n    def get_available_memory_percent(self) -> float:\n        stats = self._get_memory_stats()\n        if stats[\"MemTotal\"] == 0:\n            return 100.0\n        return (stats[\"MemAvailable\"] / stats[\"MemTotal\"]) * 100.0\n\n    async def monitor_lmk_pressure(self, callback_on_suspend):\n        print(\"[VoidGovernor] Daemon loop started. Watching memory pressure...\")\n        while not self.is_suspended:\n            avail_pct = self.get_available_memory_percent()\n            \n\n            if avail_pct < self.threshold:\n                print(f\"\\n[VoidGovernor] \u26a0\ufe0f CRITICAL: Memory dropped to {avail_pct:.1f}%. System threat imminent!\")\n                self.is_suspended = True\n                await callback_on_suspend()\n                break\n                \n            await asyncio.sleep(1)\n\n    def serialize_intent(self, task_id: str, current_state: dict):\n        workflow_path = os.path.expanduser(\"~/Projects/workflow.json\")\n        dump = {\n            \"task_id\": task_id,\n            \"status\": \"suspended_by_governor\",\n            \"saved_state\": current_state,\n            \"timestamp\": time.time()\n        }\n        try:\n            if os.path.exists(workflow_path):\n                with open(workflow_path, 'r') as f:\n                    workflow = json.load(f)\n            else:\n                workflow = {\"intents\": []}\n                \n            workflow[\"intents\"] = [dump]\n            \n            with open(workflow_path, 'w') as f:\n                json.dump(workflow, f, indent=2)\n                \n            print(f\"[VoidGovernor] Intent successfully preserved. Yielding process gracefully.\")\n        except Exception as e:\n            pass",
+    "skeleton": "class VoidGovernor:\n    pass"
+}

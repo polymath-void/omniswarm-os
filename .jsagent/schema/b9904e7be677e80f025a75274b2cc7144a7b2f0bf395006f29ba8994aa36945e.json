@@ -1,0 +1,18 @@
+{
+    "metadata": {
+        "type": "AsyncFunctionDef",
+        "name": "mock_agent_lifecycle",
+        "hash": "b9904e7be677e80f025a75274b2cc7144a7b2f0bf395006f29ba8994aa36945e",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/examples/agent_llm_harness_example.py",
+        "line_number": 11,
+        "calls": [
+            "get_llm_tool_schemas",
+            "suspend_intent_safely",
+            "print",
+            "OmniOSAgentHarness",
+            "execute_in_swarm"
+        ]
+    },
+    "source": "async def mock_agent_lifecycle():\n    print(\"=== AGENT HARNESS: LLM INTEGRATION TEST ===\\n\")\n    \n    # Advanced Context Manager usage\n    async with OmniOSAgentHarness(agent_id=\"Agent-GPT4\") as harness:\n        \n        # 1. Agent Understanding (Dynamic Tool Extraction)\n        tools = harness.get_llm_tool_schemas()\n        print(\"[Agent Logic] I discovered the following OS schemas:\")\n        for t in tools:\n            print(f\"  -> {t['function']['name']}: {t['function']['description']}\")\n            \n        print(\"\\n[Agent Logic] Injecting schemas into my LLM Context...\")\n        \n        # 2. Optimized Execution\n        print(\"\\n[Agent Logic] Executing a remote tool via ZMQ Harness...\")\n        result = await harness.execute_in_swarm(\n            tool_name=\"query_holographic_ast\", \n            args={\"intent\": \"User Authentication\"},\n            timeout=1.0\n        )\n        print(f\"[Harness Response] {result}\")\n        \n        # 3. Graceful Suspension\n        print(\"\\n[Agent Logic] Memory pressure detected. Yielding execution gracefully.\")\n        await harness.suspend_intent_safely({\"current_file\": \"auth.py\", \"lines_read\": 140})",
+    "skeleton": "async def mock_agent_lifecycle():\n    pass"
+}

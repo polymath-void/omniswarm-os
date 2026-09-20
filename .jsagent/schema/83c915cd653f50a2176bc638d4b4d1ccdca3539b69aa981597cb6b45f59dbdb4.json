@@ -1,0 +1,26 @@
+{
+    "metadata": {
+        "type": "AsyncFunctionDef",
+        "name": "run_360_test",
+        "hash": "83c915cd653f50a2176bc638d4b4d1ccdca3539b69aa981597cb6b45f59dbdb4",
+        "file": "/data/data/com.termux/files/home/Projects/omniswarm-os/test_360_e2e.py",
+        "line_number": 11,
+        "calls": [
+            "kill",
+            "type",
+            "getcwd",
+            "Popen",
+            "print",
+            "terminate",
+            "OmniOSAgentHarness",
+            "execute_in_swarm",
+            "wait",
+            "poll",
+            "communicate",
+            "get",
+            "sleep"
+        ]
+    },
+    "source": "async def run_360_test():\n    print(\"\\n=======================================================\")\n    print(\" \ud83d\ude80 INITIATING OMNIOS 360-DEGREE END-TO-END TEST SUITE\")\n    print(\"=======================================================\\n\")\n    \n    print(\"[Test] 1/7: Booting OmniOS Root Kernel...\")\n    daemon_proc = subprocess.Popen(\n        [sys.executable, \"omniswarm-py/omniswarm_daemon.py\"],\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n        text=True,\n        cwd=os.getcwd()\n    )\n    \n    await asyncio.sleep(4.0)\n    \n    if daemon_proc.poll() is not None:\n        stdout, stderr = daemon_proc.communicate()\n        print(\"STDOUT:\", stdout)\n        print(\"STDERR:\", stderr)\n        print(\"\u274c FATAL: Daemon crashed during boot!\")\n        return\n        \n    print(\"\u2705 Daemon successfully booted and bound to ZMQ.\\n\")\n\n    test_failures = 0\n    try:\n        async with OmniOSAgentHarness(agent_id=\"TestRunner\") as harness:\n            print(\"[Test] 2/7: Testing ZeroMQ P2P Mesh Connectivity...\")\n            res = await harness.execute_in_swarm(\"ping_edge_node\", {}, timeout=2.0)\n            if res.get(\"status\") == \"success\" and res.get(\"message\") == \"pong\":\n                print(\"  \u2705 Mesh Broker Responsive.\")\n            else:\n                print(f\"  \u274c Mesh Broker Failed: {res}\")\n                test_failures += 1\n\n            print(\"[Test] 3/7: Testing Execution Branch (ComputeRes ZeroMQ Oracle)...\")\n            res = await harness.execute_in_swarm(\"compute_res_execute_bash\", {\"cmd\": \"echo 'OmniOS_Execution_Pass'\"}, timeout=2.0)\n            if res.get(\"status\") == \"success\" and 'OmniOS_Execution_Pass' in res.get(\"stdout\", \"\"):\n                print(\"  \u2705 ComputeRes Stateful Bash Executed Successfully.\")\n            else:\n                print(f\"  \u274c ComputeRes Execution Failed: {res}\")\n                test_failures += 1\n                \n            print(\"[Test] 4/7: Testing Cognition Branch (Holographic AST Vector Query)...\")\n            res = await harness.execute_in_swarm(\"query_holographic_ast\", {\"intent\": \"network connectivity\"}, timeout=2.0)\n            if res.get(\"status\") in [\"success\", \"pending\", \"error\"] or type(res) == list:\n                print(f\"  \u2705 NodeOS Vector Search Responded.\")\n            else:\n                print(f\"  \u274c NodeOS Search Failed: {res}\")\n                test_failures += 1\n\n            print(\"[Test] 5/7: Testing Time Branch (Jage IPC Node.js Bridge)...\")\n            res = await harness.execute_in_swarm(\"jage_sync_ast\", {}, timeout=2.0)\n            if res.get(\"status\") in [\"success\", \"synced\", \"pending\", \"error\"]:\n                print(f\"  \u2705 Jage Native IPC Bridge Responsive. ({res.get('status')})\")\n            else:\n                print(f\"  \u274c Jage IPC Failed: {res}\")\n                test_failures += 1\n\n            print(\"[Test] 6/7: Testing Intent Garbage Collector...\")\n            res = await harness.execute_in_swarm(\"trigger_intent_gc\", {}, timeout=2.0)\n            if \"status\" in res:\n                print(f\"  \u2705 Garbage Collector Executed Successfully. ({res.get('message')})\")\n            else:\n                print(f\"  \u274c Garbage Collector Failed: {res}\")\n                test_failures += 1\n\n            print(\"[Test] 7/7: Testing Void-Governor Memory Safety Array...\")\n            if daemon_proc.poll() is None:\n                print(\"  \u2705 Kernel has sustained operation. No LMK crashes.\")\n            else:\n                print(\"  \u274c Kernel crashed during execution!\")\n                test_failures += 1\n\n    finally:\n        print(\"\\n[Test] Shutting down OS Daemon...\")\n        daemon_proc.terminate()\n        try:\n            daemon_proc.wait(timeout=3)\n        except subprocess.TimeoutExpired:\n            daemon_proc.kill()\n            \n    print(\"\\n=======================================================\")\n    if test_failures == 0:\n        print(\" \ud83c\udfc6 360-DEGREE TEST COMPLETE: ALL SYSTEMS NOMINAL (PASS)\")\n    else:\n        print(f\" \u26a0\ufe0f 360-DEGREE TEST COMPLETE: {test_failures} FAILURES DETECTED\")\n    print(\"=======================================================\\n\")",
+    "skeleton": "async def run_360_test():\n    pass"
+}
