@@ -90,7 +90,7 @@ class OmniHubRegistry:
         if "NodeOS" in self.adapters:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
         if "ComputeRes" in self.adapters:
-            self.mesh.register_tool(name="compute_res_execute_bash", schema={"parameters": {"cmd": "string"}})
+            self.mesh.register_tool(name="query_skills", schema={"parameters": {"query": "string"}})
             self.mesh.register_tool(name="compute_res_manage_processes", schema={"parameters": {"action": "string"}})
         if "PolymathJage" in self.adapters:
             self.mesh.register_tool(name="jage_sync_ast", schema={"parameters": {}})

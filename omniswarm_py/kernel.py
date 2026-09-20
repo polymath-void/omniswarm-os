@@ -105,7 +105,7 @@ class OmniOSRootKernel:
         if "Cognition" in self.branches and self.branches["Cognition"]:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
         if "Execution" in self.branches and self.branches["Execution"]:
-            self.mesh.register_tool(name="compute_res_execute_bash", schema={"parameters": {"cmd": "string"}})
+            self.mesh.register_tool(name="query_skills", schema={"parameters": {"query": "string"}})
         if "Time" in self.branches and self.branches["Time"]:
             self.mesh.register_tool(name="jage_sync_ast", schema={"parameters": {}})
             
@@ -115,8 +115,8 @@ class OmniOSRootKernel:
                 return {"status": "success", "events": self.event_ledger.query_events_since(args.get("since_timestamp", 0.0))}
             if tool_name == "trigger_intent_gc":
                 return self.intent_gc.sweep_completed_intents()
-            if tool_name == "compute_res_execute_bash" and "Execution" in self.branches:
-                return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "EXEC_BASH", "args": args})
+            if tool_name in ["query_skills", "publish_skill", "adapt_and_publish_skill"] and "Execution" in self.branches:
+                return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "SKILL_ROUTER_INVOKE", "args": args})
             if tool_name == "query_holographic_ast" and "Cognition" in self.branches:
                 # Wrap sync call in asyncio to thread or execute directly
                 return {"status": "success", "results": self.branches["Cognition"].semantic_search(args.get("intent", ""), args.get("top_k", 3))}
