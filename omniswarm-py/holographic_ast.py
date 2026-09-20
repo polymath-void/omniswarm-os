@@ -33,6 +33,21 @@ class HolographicASTGraph:
         conn = self._get_connection()
         cursor = conn.cursor()
         
+        # Cold Boot Auto-Initialization
+        cursor.execute('''CREATE TABLE IF NOT EXISTS nodes (
+            node_id TEXT PRIMARY KEY,
+            node_type TEXT,
+            name TEXT,
+            filepath TEXT,
+            hash TEXT,
+            x_coord REAL DEFAULT 500,
+            y_coord REAL DEFAULT 500,
+            last_updated TIMESTAMP,
+            vector_embedding TEXT
+        )''')
+        conn.commit()
+
+        
         try:
             cursor.execute("ALTER TABLE nodes ADD COLUMN vector_embedding TEXT")
             conn.commit()
@@ -64,6 +79,21 @@ class HolographicASTGraph:
         intent_vector = self._generate_pseudo_embedding(intent)
         conn = self._get_connection()
         cursor = conn.cursor()
+        
+        # Cold Boot Auto-Initialization
+        cursor.execute('''CREATE TABLE IF NOT EXISTS nodes (
+            node_id TEXT PRIMARY KEY,
+            node_type TEXT,
+            name TEXT,
+            filepath TEXT,
+            hash TEXT,
+            x_coord REAL DEFAULT 500,
+            y_coord REAL DEFAULT 500,
+            last_updated TIMESTAMP,
+            vector_embedding TEXT
+        )''')
+        conn.commit()
+
         
         cursor.execute("SELECT node_id, name, node_type, vector_embedding FROM nodes WHERE vector_embedding IS NOT NULL")
         all_nodes = cursor.fetchall()

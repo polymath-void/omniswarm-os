@@ -8,9 +8,6 @@ if sys.stdout.encoding != 'utf-8':
     except AttributeError:
         pass
 
-# [Windows Compatibility Patch] Fix PyZMQ ProactorEventLoop Crash
-if sys.platform == 'win32':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import os
 import json

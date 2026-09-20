@@ -1,10 +1,13 @@
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import bootloader
+bootloader.ensure_environment()
 import sys
 import asyncio
 from kernel import OmniOSRootKernel
 
 # Cross-platform compatibility for Windows (PyZMQ and Unicode)
-if sys.platform == 'win32':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 if sys.stdout and sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
