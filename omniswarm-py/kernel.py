@@ -13,6 +13,7 @@ from intent_gc import IntentGarbageCollector
 class OmniOSRootKernel:
     def __init__(self, workspace_root=None):
         self.workspace_root = workspace_root or os.getcwd()
+        self.parent_root = os.path.dirname(self.workspace_root)
         self.node_id = f"OmniOS-Kernel-{os.getpid()}"
         
         self.mesh = MCPMeshBroker(self.node_id)
@@ -34,16 +35,33 @@ class OmniOSRootKernel:
         except subprocess.CalledProcessError:
             pass
 
+    def _symlink_from_umbrella(self, target_name: str):
+        """Intelligently links from the parent umbrella workspace instead of re-downloading."""
+        local_path = os.path.join(self.workspace_root, target_name)
+        umbrella_path = os.path.join(self.parent_root, target_name)
+        
+        if not os.path.exists(local_path) and os.path.exists(umbrella_path):
+            os.symlink(umbrella_path, local_path)
+            print(f"[{self.node_id}] 🔗 Dynamically symlinked umbrella project: {target_name}")
+            return True
+        return os.path.exists(local_path)
+
     def _ensure_os_dependencies(self):
+        # 1. Check/Symlink NodeOS database
+        self._symlink_from_umbrella("agy_nodeos.db")
         if not shutil.which("nodeos"):
             pip_cmd = "pip install polymath-nodeos" + (" --break-system-packages" if self._is_termux() else "")
             self._run_cmd(pip_cmd, "polymath-nodeos (Cognition Branch)")
             
-        if not shutil.which("jage") and not os.path.exists(os.path.join(self.workspace_root, "polymath-jage")):
+        # 2. Check/Symlink Jage
+        has_jage = self._symlink_from_umbrella("polymath-jage")
+        if not shutil.which("jage") and not has_jage:
             self._run_cmd("npm install -g polymath-jage", "polymath-jage (Time Branch)")
             
-        compute_res_path = os.path.join(self.workspace_root, "ComputeRes")
-        if not os.path.exists(compute_res_path):
+        # 3. Check/Symlink ComputeRes
+        has_compute = self._symlink_from_umbrella("ComputeRes")
+        if not has_compute:
+            compute_res_path = os.path.join(self.workspace_root, "ComputeRes")
             self._run_cmd(f"git clone https://github.com/polymath-void/ComputeRes.git {compute_res_path}", "Execution Branch")
 
     def _mount_branches(self):
@@ -69,8 +87,6 @@ class OmniOSRootKernel:
 
     def register_mesh_tools(self):
         self.mesh.register_tool(name="ping_edge_node", schema={"returns": "pong"})
-        
-        # Expose the GC trigger to the swarm
         self.mesh.register_tool(name="trigger_intent_gc", schema={"description": "Cleans up completed intents instantly."})
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
@@ -80,7 +96,6 @@ class OmniOSRootKernel:
         if "Time" in self.branches and self.branches["Time"]:
             self.mesh.register_tool(name="jage_sync_ast", schema={"parameters": {}})
             
-        # Hook native GC execution
         original_handler = self.mesh.handle_incoming_request
         async def hooked_handler(tool_name: str, args: dict):
             if tool_name == "trigger_intent_gc":
@@ -92,8 +107,6 @@ class OmniOSRootKernel:
 
     async def boot(self):
         self.register_mesh_tools()
-        
-        # Run GC EXACTLY ONCE at boot
         self.intent_gc.sweep_completed_intents()
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
