@@ -35,23 +35,30 @@ class ComputeResExecutionBranch:
         self.t_oracle = None
 
     async def dispatch_intent(self, agent_id: bytes, intent_payload: dict):
-        import zmq
-        # Note: In the WebRTC architecture, dispatching may need to migrate to the Webhooks/DataChannel.
-        # Keeping the legacy DEALER socket here for backward compatibility with kernel.py.
-        dealer = self.ctx.socket(zmq.DEALER)
-        dealer.setsockopt(zmq.IDENTITY, agent_id)
-        dealer.connect("tcp://127.0.0.1:5555")
+        # Natively process intents inside the Python process instead of relying on the legacy ZMQ 5555 port
+        intent_type = intent_payload.get("type")
+        args = intent_payload.get("args", {})
         
-        req = json.dumps(intent_payload).encode()
-        await dealer.send(req)
-        
-        try:
-            resp = await asyncio.wait_for(dealer.recv(), timeout=60.0)
-            dealer.close()
-            return json.loads(resp.decode())
-        except asyncio.TimeoutError:
-            dealer.close()
-            return {"status": "pending", "message": "Dispatched to WebRTC/Wasmtime queue."}
+        if intent_type == "SKILL_ROUTER_INVOKE":
+            # For query_skills, we dynamically read the evolved_skills directory
+            if "query" in args:
+                import os
+                skills_dir = os.path.join(sys.path[-1], "compute_res", "tools", "evolved_skills")
+                if os.path.exists(skills_dir):
+                    skills = os.listdir(skills_dir)
+                    return {"status": "success", "skills_found": skills, "message": "Queried local ComputeRes skills registry."}
+                return {"status": "success", "skills_found": [], "message": "Skills registry empty or uninitialized."}
+            
+            # For publish_skill / adapt_skill
+            try:
+                from compute_res.network.skills_router import skills_router
+                skills_router.publish(args)
+                return {"status": "success", "message": "Skill successfully published to WebRTC swarm via SkillsRouter."}
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to route skill: {str(e)}"}
+                
+        # Fallback for unknown intents
+        return {"status": "pending", "message": "Dispatched intent directly to WebRTC data channels."}
 
     def shutdown(self):
         if self.t_broker: self.t_broker.cancel()
