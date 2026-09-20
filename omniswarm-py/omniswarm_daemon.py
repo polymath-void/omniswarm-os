@@ -1,5 +1,12 @@
+import sys
 import asyncio
 from kernel import OmniOSRootKernel
+
+# Cross-platform compatibility for Windows (PyZMQ and Unicode)
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+if sys.stdout and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 class OmniOSDaemon:
     def __init__(self):

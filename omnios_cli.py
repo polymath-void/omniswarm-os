@@ -4,6 +4,12 @@ import sys
 import json
 import os
 
+# Cross-platform compatibility for Windows (PyZMQ and Unicode)
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+if sys.stdout and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 # Safely resolve the correct absolute path to the module
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(SCRIPT_DIR, "omniswarm-py"))
