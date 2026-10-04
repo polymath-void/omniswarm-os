@@ -30,6 +30,34 @@ class OmniOSRootKernel:
     def _is_termux(self):
         return "com.termux" in os.environ.get("PREFIX", "") or hasattr(sys, 'getandroidapilevel')
 
+    def _ensure_venv(self):
+        if self._is_termux():
+            return
+            
+        in_venv = hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+        if in_venv:
+            return
+            
+        import sysconfig
+        stdlib_path = sysconfig.get_path("stdlib")
+        if stdlib_path and os.path.exists(os.path.join(stdlib_path, "EXTERNALLY-MANAGED")):
+            venv_dir = os.path.join(self.workspace_root, ".omnios_venv")
+            if not os.path.exists(venv_dir):
+                print(f"[{self.node_id}] System is externally managed. Creating isolated .omnios_venv...")
+                subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True)
+            
+            if sys.platform == 'win32':
+                python_exe = os.path.join(venv_dir, "Scripts", "python.exe")
+                venv_bin = os.path.join(venv_dir, "Scripts")
+            else:
+                python_exe = os.path.join(venv_dir, "bin", "python")
+                venv_bin = os.path.join(venv_dir, "bin")
+                
+            if os.path.abspath(sys.executable) != os.path.abspath(python_exe):
+                print(f"[{self.node_id}] Proxying daemon process into isolated venv...")
+                os.environ["PATH"] = venv_bin + os.pathsep + os.environ.get("PATH", "")
+                os.execv(python_exe, [python_exe] + sys.argv)
+
     def _run_cmd(self, cmd: str, description: str):
         try:
             subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -49,6 +77,8 @@ class OmniOSRootKernel:
         return os.path.exists(local_path)
 
     def _ensure_os_dependencies(self):
+        self._ensure_venv()
+        
         # 1. Check/Symlink NodeOS database
         self._symlink_from_umbrella("agy_nodeos.db")
         if not shutil.which("nodeos"):
@@ -58,8 +88,9 @@ class OmniOSRootKernel:
                 print(f"[{self.node_id}] Installing Core Python Dependencies (pyzmq, psutil, tornado)...")
                 req_file = os.path.join(self.parent_root, "omniswarm-os", "requirements.txt")
                 if os.path.exists(req_file):
-                    self._run_cmd(f"pip install -r {req_file}" + (" --break-system-packages" if self._is_termux() else ""), "OmniOS Core Requirements")
-            pip_cmd = "pip install polymath-nodeos" + (" --break-system-packages" if self._is_termux() else "")
+                    pip_cmd = f"{sys.executable} -m pip install -r {req_file}" + (" --break-system-packages" if self._is_termux() else "")
+                    self._run_cmd(pip_cmd, "OmniOS Core Requirements")
+            pip_cmd = f"{sys.executable} -m pip install polymath-nodeos" + (" --break-system-packages" if self._is_termux() else "")
             self._run_cmd(pip_cmd, "polymath-nodeos (Cognition Branch)")
             
         # 2. Check/Symlink Jage

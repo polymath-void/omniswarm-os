@@ -27,9 +27,6 @@ class HolographicASTGraph:
 
     async def generate_embeddings_background_task(self, on_batch_complete=None):
         """Scans the NodeOS db and generates embeddings asynchronously without spiking CPU."""
-        if not os.path.exists(self.db_path):
-            return
-
         conn = self._get_connection()
         cursor = conn.cursor()
         

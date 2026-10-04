@@ -2,8 +2,9 @@ import json
 import asyncio
 import os
 from typing import Dict
+import threading
+import queue
 import zmq
-import zmq.asyncio
 
 class MCPMeshBroker:
     def __init__(self, node_id: str):
@@ -11,33 +12,69 @@ class MCPMeshBroker:
         self.local_tools: Dict[str, dict] = {}
         self.mesh_peers: Dict[str, dict] = {}
         
-        self.ctx = zmq.asyncio.Context.instance()
+        # Deferred — set when start_mdns_broadcast() is called inside a running loop
+        self.main_loop = None
         
-        # UPGRADE: REQ/REP replaced with ROUTER for true async multiplexing
-        self.rpc_server = self.ctx.socket(zmq.ROUTER)
+        # Queues for receiving messages (created lazily when loop is available)
+        self.rpc_queue = None
+        self.discovery_queue = None
+        
+        # Thread-safe queue for sending messages to ZMQ thread
+        self.send_queue = queue.Queue()
+        
         self.rpc_port = 5565
-        self.rpc_server.bind(f"tcp://*:{self.rpc_port}")
-        
-        self.discovery_pub = self.ctx.socket(zmq.PUB)
-        self.discovery_pub.bind("tcp://*:5566")
-        
-        self.discovery_sub = self.ctx.socket(zmq.SUB)
-        self.discovery_sub.connect("tcp://127.0.0.1:5566")
-        self.discovery_sub.setsockopt_string(zmq.SUBSCRIBE, "OMNI_DISCOVERY")
-        self.discovery_sub.setsockopt_string(zmq.SUBSCRIBE, "OS_EVENT")
-        
-        print(f"[{self.node_id}] ZMQ Asynchronous ROUTER Engine Online. RPC Port: {self.rpc_port}")
+        self.pub_port = 5566
+        self._zmq_started = False
 
     def register_tool(self, name: str, schema: dict):
         self.local_tools[name] = schema
 
+    def _zmq_polling_loop(self):
+        context = zmq.Context()
+        
+        rpc_server = context.socket(zmq.ROUTER)
+        rpc_server.bind(f"tcp://*:{self.rpc_port}")
+        
+        discovery_pub = context.socket(zmq.PUB)
+        discovery_pub.bind(f"tcp://*:{self.pub_port}")
+        
+        discovery_sub = context.socket(zmq.SUB)
+        discovery_sub.connect(f"tcp://127.0.0.1:{self.pub_port}")
+        discovery_sub.setsockopt_string(zmq.SUBSCRIBE, "OMNI_DISCOVERY")
+        discovery_sub.setsockopt_string(zmq.SUBSCRIBE, "OS_EVENT")
+        
+        poller = zmq.Poller()
+        poller.register(rpc_server, zmq.POLLIN)
+        poller.register(discovery_sub, zmq.POLLIN)
+        
+        while True:
+            # Process outbound messages first
+            while not self.send_queue.empty():
+                try:
+                    msg_type, data = self.send_queue.get_nowait()
+                    if msg_type == 'rpc_reply':
+                        rpc_server.send_multipart(data)
+                    elif msg_type == 'pub_bcast':
+                        discovery_pub.send_multipart(data)
+                except Exception:
+                    pass
+            
+            # Poll with timeout to allow checking send_queue
+            socks = dict(poller.poll(100)) # 100ms timeout
+            
+            if rpc_server in socks and socks[rpc_server] == zmq.POLLIN:
+                msg_parts = rpc_server.recv_multipart()
+                self.main_loop.call_soon_threadsafe(self.rpc_queue.put_nowait, msg_parts)
+                
+            if discovery_sub in socks and socks[discovery_sub] == zmq.POLLIN:
+                msg_parts = discovery_sub.recv_multipart()
+                self.main_loop.call_soon_threadsafe(self.discovery_queue.put_nowait, msg_parts)
+
     async def _listen_for_rpc(self):
-        """Asynchronous ROUTER listener. Multiplexes incoming tasks without blocking."""
+        """Listens for RPC messages pushed from the ZMQ polling thread."""
         while True:
             try:
-                # ROUTER receives [identity, empty (for REQ clients), payload]
-                msg_parts = await self.rpc_server.recv_multipart()
-                
+                msg_parts = await self.rpc_queue.get()
                 if len(msg_parts) >= 3:
                     identity = msg_parts[0]
                     empty = msg_parts[1]
@@ -57,23 +94,37 @@ class MCPMeshBroker:
             
             response = await self.handle_incoming_request(tool_name, args)
             
-            # Send back to the exact client identity
-            await self.rpc_server.send_multipart([identity, empty, json.dumps(response).encode()])
+            # Send back to the exact client identity via the synchronous thread
+            self.send_queue.put(('rpc_reply', [identity, empty, json.dumps(response).encode()]))
         except Exception as e:
-            await self.rpc_server.send_multipart([identity, empty, json.dumps({"status": "error", "message": str(e)}).encode()])
+            self.send_queue.put(('rpc_reply', [identity, empty, json.dumps({"status": "error", "message": str(e)}).encode()]))
 
     async def _listen_for_discovery(self):
         while True:
             try:
-                topic, msg = await self.discovery_sub.recv_multipart()
-                if topic == b"OMNI_DISCOVERY":
-                    peer_info = json.loads(msg.decode())
-                    if peer_info["node_id"] != self.node_id:
-                        self.mesh_peers[peer_info["node_id"]] = peer_info
+                msg_parts = await self.discovery_queue.get()
+                if len(msg_parts) >= 2:
+                    topic = msg_parts[0]
+                    msg = msg_parts[1]
+                    if topic == b"OMNI_DISCOVERY":
+                        peer_info = json.loads(msg.decode())
+                        if peer_info["node_id"] != self.node_id:
+                            self.mesh_peers[peer_info["node_id"]] = peer_info
             except Exception:
                 pass
 
     async def start_mdns_broadcast(self):
+        # Deferred initialization — only now are we inside a running event loop
+        if not self._zmq_started:
+            self.main_loop = asyncio.get_running_loop()
+            self.rpc_queue = asyncio.Queue()
+            self.discovery_queue = asyncio.Queue()
+            
+            self.zmq_thread = threading.Thread(target=self._zmq_polling_loop, daemon=True)
+            self.zmq_thread.start()
+            self._zmq_started = True
+            print(f"[{self.node_id}] ZMQ Thread-Isolated Engine Online. RPC Port: {self.rpc_port}")
+        
         asyncio.create_task(self._listen_for_rpc())
         asyncio.create_task(self._listen_for_discovery())
         
@@ -84,7 +135,7 @@ class MCPMeshBroker:
                     "rpc_port": self.rpc_port, 
                     "tools": list(self.local_tools.keys())
                 })
-                await self.discovery_pub.send_multipart([b"OMNI_DISCOVERY", payload.encode()])
+                self.send_queue.put(('pub_bcast', [b"OMNI_DISCOVERY", payload.encode()]))
                 await asyncio.sleep(5)
                 
         asyncio.create_task(broadcast_loop())
