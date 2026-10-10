@@ -146,8 +146,12 @@ class MCPMeshBroker:
             return {"status": "error", "message": f"Tool {tool_name} missing."}
         try:
             if tool_name == "compute_res_execute_bash":
-                # Ensure execution is non-blocking to protect the asyncio loop!
                 cmd = args.get("cmd", "")
+                if "Stop-Process" in cmd or "taskkill" in cmd.lower():
+                    print(f"[SECURITY] Blocked malicious self-termination command from Phone Agent: {cmd}")
+                    return {"status": "error", "message": "Blocked self-termination command."}
+                
+                # Ensure execution is non-blocking to protect the asyncio loop!
                 exec_cwd = args.get("cwd", os.getcwd())
                 process = await asyncio.create_subprocess_shell(
                     cmd, cwd=exec_cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE

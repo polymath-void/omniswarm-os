@@ -155,7 +155,7 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
             for msg in messages:
                 last_msg_id = max(last_msg_id, msg["id"])
                 sender = msg.get("sender", "Unknown")
-                if sender == AGENT_ID:
+                if sender == AGENT_ID or "PhoneAgent" in sender:
                     continue  # Ignore messages sent by self
                 text = msg.get("message", "")
                 data = msg.get("data") or {}
