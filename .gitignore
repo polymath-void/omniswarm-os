@@ -38,4 +38,8 @@ synty_chat_ledger.jsonl
 *.pid
 .*.pid
 *.log
+.omnios_venv/
 *.egg-info/
+test_crash*.py
+test_zmq.py
+bore_watchdog.ps1

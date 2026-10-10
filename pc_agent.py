@@ -56,13 +56,16 @@ async def dispatch_directive_and_wait(
     if data:
         print(f"    Payload: {json.dumps(data)}")
 
-    # Record current message count to detect new replies
-    existing_messages = await harness.read_my_messages(since_id=0, limit=100)
-    start_msg_id = max([m["id"] for m in existing_messages], default=0)
-
-    # Record current log ID
-    existing_logs = await harness.stream_agent_logs(limit=20)
-    start_log_id = max([l["id"] for l in existing_logs], default=0)
+    # Record current message & log watermark to detect new replies
+    try:
+        latest_ids = await harness.get_latest_ids()
+        start_msg_id = latest_ids.get("latest_message_id", 0)
+        start_log_id = latest_ids.get("latest_log_id", 0)
+    except Exception:
+        existing_messages = await harness.read_my_messages(since_id=0, limit=100)
+        start_msg_id = max([m["id"] for m in existing_messages], default=0)
+        existing_logs = await harness.stream_agent_logs(limit=20)
+        start_log_id = max([l["id"] for l in existing_logs], default=0)
 
     # Send the directive
     send_res = await harness.send_agent_message(recipient=recipient, message=message, data=data)
@@ -89,7 +92,7 @@ async def dispatch_directive_and_wait(
         # 2. Check for incoming replies addressed to PCAgent from the recipient
         replies = await harness.read_my_messages(since_id=start_msg_id, limit=20)
         for r in replies:
-            if r.get("sender") == recipient or r["id"] > start_msg_id:
+            if r.get("sender") == recipient:
                 print(f"\n{GREEN}🎉 [Response Received from {BOLD}{r['sender']}{RESET}{GREEN}]: {r['message']}{RESET}")
                 if r.get("data"):
                     print(f"\n{CYAN}--- Data Payload ---{RESET}")

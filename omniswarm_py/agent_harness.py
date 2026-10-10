@@ -287,3 +287,12 @@ class OmniOSAgentHarness:
             "limit": limit
         })
         return res.get("logs", [])
+
+    async def get_latest_ids(self) -> Dict[str, int]:
+        """Gets the latest message ID and log ID from the swarm."""
+        res = await self.execute_in_swarm("swarm_get_latest_ids", {})
+        return {
+            "latest_message_id": res.get("latest_message_id", 0),
+            "latest_log_id": res.get("latest_log_id", 0)
+        }
+

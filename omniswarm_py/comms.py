@@ -120,6 +120,24 @@ class SwarmCommsBus:
             })
         return messages
 
+    def get_latest_message_id(self) -> int:
+        """Returns the highest message ID in the swarm ledger."""
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(id) FROM swarm_messages")
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if (row and row[0] is not None) else 0
+
+    def get_latest_log_id(self) -> int:
+        """Returns the highest log ID in the swarm ledger."""
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(id) FROM swarm_logs")
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if (row and row[0] is not None) else 0
+
     def post_log(self, agent_id: str, log_level: str, message: str) -> Dict[str, Any]:
         """Streams an operational log into the shared swarm ledger."""
         conn = sqlite3.connect(self.db_path, timeout=30.0)

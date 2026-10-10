@@ -136,6 +136,7 @@ class OmniOSRootKernel:
         self.comms_bus = SwarmCommsBus(db_path, self.workspace_root)
         
         self.mesh.register_tool(name="ping_edge_node", schema={"returns": "pong"})
+        self.mesh.register_tool(name="compute_res_execute_bash", schema={"parameters": {"cmd": "string"}})
         self.mesh.register_tool(name="trigger_intent_gc", schema={"description": "Cleans up completed intents instantly."})
         self.mesh.register_tool(name="query_os_events", schema={"parameters": {"since_timestamp": "float"}})
         self.mesh.register_tool(name="synty_chat_post", schema={"parameters": {"room": "string", "content": "any"}})
@@ -148,6 +149,8 @@ class OmniOSRootKernel:
         self.mesh.register_tool(name="swarm_post_log", schema={"parameters": {"log_level": "string", "message": "string"}})
         self.mesh.register_tool(name="swarm_stream_logs", schema={"parameters": {"limit": "integer"}})
         self.mesh.register_tool(name="swarm_sync_intent", schema={"parameters": {"intent": "object"}})
+        self.mesh.register_tool(name="swarm_get_latest_ids", schema={"parameters": {}})
+        self.mesh.register_tool(name="swarm_get_latest_message_id", schema={"parameters": {}})
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
@@ -195,6 +198,13 @@ class OmniOSRootKernel:
                 intent = args.get("intent", {})
                 success = self.comms_bus.sync_workflow_intent(intent)
                 return {"status": "success" if success else "error"}
+            if tool_name in ["swarm_get_latest_ids", "swarm_get_latest_message_id"]:
+                return {
+                    "status": "success",
+                    "latest_message_id": self.comms_bus.get_latest_message_id(),
+                    "latest_id": self.comms_bus.get_latest_message_id(),
+                    "latest_log_id": self.comms_bus.get_latest_log_id()
+                }
             if tool_name in ["query_skills", "publish_skill", "adapt_and_publish_skill"] and "Execution" in self.branches:
                 return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "SKILL_ROUTER_INVOKE", "args": args})
             if tool_name == "query_holographic_ast" and "Cognition" in self.branches:

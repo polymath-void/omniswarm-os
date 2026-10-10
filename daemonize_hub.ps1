@@ -1,134 +1,260 @@
-# ==============================================================================
-# OmniSwarm Hub 24/7 Background Daemonizer (Windows PowerShell)
-# Manages OmniOS Root Kernel daemon, persistent Bore tunnel, and PCAgent loop.
-# ==============================================================================
+<#
+.SYNOPSIS
+    OmniSwarm PC Hub 24/7 Background Daemonizer (Windows PowerShell)
+.DESCRIPTION
+    Manages the OmniOS Root Kernel daemon (port 5565), persistent Bore tunnel
+    (bore.pub:33458), and the PCAgent autonomous loop as background services with
+    PID tracking, auto-restart, logging, and Windows Startup auto-boot capability.
+.EXAMPLE
+    .\daemonize_hub.ps1 start
+    .\daemonize_hub.ps1 status
+    .\daemonize_hub.ps1 stop
+    .\daemonize_hub.ps1 restart
+    .\daemonize_hub.ps1 enable-autoboot
+    .\daemonize_hub.ps1 disable-autoboot
+#>
+
 param(
     [Parameter(Position=0)]
-    [ValidateSet("start", "stop", "status", "restart")]
+    [ValidateSet("start", "stop", "status", "restart", "enable-autoboot", "disable-autoboot")]
     [string]$Action = "status"
 )
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $ScriptDir
+$WORKSPACE = $PSScriptRoot
+if (-not $WORKSPACE) { $WORKSPACE = Get-Location }
+Set-Location $WORKSPACE
 
-$HubPidFile = Join-Path $ScriptDir ".hub_daemon.pid"
-$BorePidFile = Join-Path $ScriptDir ".bore_tunnel.pid"
-$AgentPidFile = Join-Path $ScriptDir ".pc_agent.pid"
+# Paths
+$VENV_PYTHON = Join-Path $WORKSPACE ".omnios_venv\Scripts\python.exe"
+if (-not (Test-Path $VENV_PYTHON)) {
+    $VENV_PYTHON = "python.exe"
+}
+$DAEMON_SCRIPT = Join-Path $WORKSPACE "omniswarm_py\omniswarm_daemon.py"
+$AGENT_SCRIPT  = Join-Path $WORKSPACE "pc_agent.py"
+$BORE_EXE      = Join-Path $WORKSPACE "bore.exe"
 
-$HubLogFile = Join-Path $ScriptDir "hub_daemon.log"
-$BoreLogFile = Join-Path $ScriptDir "bore_tunnel.log"
-$AgentLogFile = Join-Path $ScriptDir "pc_agent.log"
+$HUB_PID_FILE   = Join-Path $WORKSPACE ".hub_daemon.pid"
+$BORE_PID_FILE  = Join-Path $WORKSPACE ".bore_tunnel.pid"
+$AGENT_PID_FILE = Join-Path $WORKSPACE ".pc_agent.pid"
 
-# Locate Python environment (.omnios_venv preferred)
-$PythonExe = Join-Path $ScriptDir ".omnios_venv\Scripts\python.exe"
-if (-not (Test-Path $PythonExe)) {
-    $PythonExe = "python.exe"
+$HUB_LOG        = Join-Path $WORKSPACE "hub_daemon.log"
+$HUB_ERR_LOG    = Join-Path $WORKSPACE "hub_daemon_err.log"
+$BORE_LOG       = Join-Path $WORKSPACE "bore_tunnel.log"
+$AGENT_LOG      = Join-Path $WORKSPACE "pc_agent.log"
+
+$STARTUP_LNK = Join-Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup" "OmniSwarm_Hub.lnk"
+$SILENT_VBS  = Join-Path $WORKSPACE "start_hub_silent.vbs"
+
+function Is-ProcessRunning([int]$pidToCheck) {
+    if ($pidToCheck -le 0) { return $false }
+    $p = Get-Process -Id $pidToCheck -ErrorAction SilentlyContinue
+    return ($null -ne $p)
 }
 
-# Locate Bore binary
-$BoreExe = Join-Path $ScriptDir "bore.exe"
-if (-not (Test-Path $BoreExe)) {
-    $BoreExe = "bore.exe"
-}
-
-function Test-ProcessAlive($pidFile) {
-    if (Test-Path $pidFile) {
-        $rawPid = Get-Content $pidFile -ErrorAction SilentlyContinue
-        if ($rawPid) {
-            $pId = [int]$rawPid
-            $proc = Get-Process -Id $pId -ErrorAction SilentlyContinue
-            if ($proc) { return $proc }
+function Get-StoredPid([string]$pidFilePath) {
+    if (Test-Path $pidFilePath) {
+        $content = (Get-Content $pidFilePath -ErrorAction SilentlyContinue | Out-String).Trim()
+        if ($content -match '^\d+$') {
+            return [int]$content
         }
     }
-    return $null
+    return 0
 }
 
 function Start-Hub {
-    Write-Host ">>> Starting OmniSwarm Hub 24/7 Services..." -ForegroundColor Cyan
+    Write-Host "`n>>> [OmniSwarm PC Hub] Starting 24/7 Background Services..." -ForegroundColor Cyan
 
-    # 1. OmniOS Root Kernel Daemon (Port 5565)
-    $hubProc = Test-ProcessAlive $HubPidFile
-    if ($hubProc) {
-        Write-Host "    • OmniOS Kernel already running (PID: $($hubProc.Id))" -ForegroundColor Yellow
+    # 1. Start OmniOS Root Kernel
+    $hubPid = Get-StoredPid $HUB_PID_FILE
+    if ($hubPid -gt 0 -and (Is-ProcessRunning $hubPid)) {
+        Write-Host "    [OK] OmniOS Root Kernel is already running (PID: $hubPid)" -ForegroundColor Green
     } else {
-        $daemonScript = Join-Path $ScriptDir "omniswarm_py\omniswarm_daemon.py"
-        $proc = Start-Process -FilePath $PythonExe -ArgumentList "-u", "`"$daemonScript`"" -RedirectStandardOutput $HubLogFile -RedirectStandardError $HubLogFile -WindowStyle Hidden -PassThru
-        $proc.Id | Out-File -FilePath $HubPidFile -Encoding ascii
-        Write-Host "    • OmniOS Kernel daemon started (PID: $($proc.Id))" -ForegroundColor Green
+        Write-Host "    Launching OmniOS Root Kernel on port 5565..." -ForegroundColor Yellow
+        $hubProc = Start-Process -FilePath $VENV_PYTHON `
+            -ArgumentList "-u `"$DAEMON_SCRIPT`"" `
+            -WorkingDirectory $WORKSPACE `
+            -WindowStyle Hidden `
+            -PassThru `
+            -RedirectStandardOutput $HUB_LOG `
+            -RedirectStandardError $HUB_ERR_LOG
+
+        if ($hubProc) {
+            Set-Content -Path $HUB_PID_FILE -Value $hubProc.Id -Force
+            Write-Host "    [OK] OmniOS Root Kernel started (PID: $($hubProc.Id))" -ForegroundColor Green
+        } else {
+            Write-Host "    [ERROR] Failed to start OmniOS Root Kernel" -ForegroundColor Red
+        }
     }
 
-    Start-Sleep -Seconds 1
+    # 2. Start Persistent Bore Tunnel
+    $borePid = Get-StoredPid $BORE_PID_FILE
+    $boreRunning = $borePid -gt 0 -and (Is-ProcessRunning $borePid)
+    $boreExeRunning = (Get-Process -Name "bore" -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0
 
-    # 2. Persistent Bore TCP Tunnel (Port 5565 -> bore.pub:33458)
-    $boreProc = Test-ProcessAlive $BorePidFile
-    if ($boreProc) {
-        Write-Host "    • Bore tunnel already running (PID: $($boreProc.Id))" -ForegroundColor Yellow
+    if ($boreRunning -and $boreExeRunning) {
+        Write-Host "    [OK] Bore Tunnel Watchdog is already running (PID: $borePid)" -ForegroundColor Green
     } else {
-        $proc = Start-Process -FilePath $BoreExe -ArgumentList "local 5565 --to bore.pub --port 33458" -RedirectStandardOutput $BoreLogFile -RedirectStandardError $BoreLogFile -WindowStyle Hidden -PassThru
-        $proc.Id | Out-File -FilePath $BorePidFile -Encoding ascii
-        Write-Host "    • Bore tunnel started on bore.pub:33458 (PID: $($proc.Id))" -ForegroundColor Green
+        Write-Host "    Launching Bore Tunnel Watchdog (bore.pub:33458 -> localhost:5565)..." -ForegroundColor Yellow
+        $watchdogScript = "while (`$true) { Write-Output `"[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Starting bore tunnel on 33458...`"; & `'$BORE_EXE`' local 5565 --to bore.pub --port 33458 *>> `'$BORE_LOG`'; Start-Sleep -Seconds 2 }"
+        
+        $boreProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$watchdogScript`"" `
+            -WorkingDirectory $WORKSPACE `
+            -WindowStyle Hidden `
+            -PassThru
+
+        if ($boreProc) {
+            Set-Content -Path $BORE_PID_FILE -Value $boreProc.Id -Force
+            Write-Host "    [OK] Bore Tunnel Watchdog started (PID: $($boreProc.Id))" -ForegroundColor Green
+        } else {
+            Write-Host "    [ERROR] Failed to start Bore Tunnel Watchdog" -ForegroundColor Red
+        }
     }
 
-    # 3. Autonomous PC Agent Event Loop
-    $agentProc = Test-ProcessAlive $AgentPidFile
-    if ($agentProc) {
-        Write-Host "    • PCAgent autonomous loop already running (PID: $($agentProc.Id))" -ForegroundColor Yellow
+    # 3. Start PCAgent Autonomous Loop (if --loop-only supported)
+    $agentPid = Get-StoredPid $AGENT_PID_FILE
+    if ($agentPid -gt 0 -and (Is-ProcessRunning $agentPid)) {
+        Write-Host "    [OK] PCAgent Autonomous Loop is already running (PID: $agentPid)" -ForegroundColor Green
     } else {
-        $agentScript = Join-Path $ScriptDir "pc_agent.py"
-        $proc = Start-Process -FilePath $PythonExe -ArgumentList "-u", "`"$agentScript`"", "--loop-only" -RedirectStandardOutput $AgentLogFile -RedirectStandardError $AgentLogFile -WindowStyle Hidden -PassThru
-        $proc.Id | Out-File -FilePath $AgentPidFile -Encoding ascii
-        Write-Host "    • PCAgent autonomous loop started (PID: $($proc.Id))" -ForegroundColor Green
+        Write-Host "    Launching PCAgent Autonomous Loop..." -ForegroundColor Yellow
+        $agentProc = Start-Process -FilePath $VENV_PYTHON `
+            -ArgumentList "-u `"$AGENT_SCRIPT`" --loop-only" `
+            -WorkingDirectory $WORKSPACE `
+            -WindowStyle Hidden `
+            -PassThru `
+            -RedirectStandardOutput $AGENT_LOG `
+            -RedirectStandardError (Join-Path $WORKSPACE "pc_agent_err.log")
+
+        if ($agentProc) {
+            Set-Content -Path $AGENT_PID_FILE -Value $agentProc.Id -Force
+            Write-Host "    [OK] PCAgent Autonomous Loop started (PID: $($agentProc.Id))" -ForegroundColor Green
+        }
     }
 
-    Write-Host ">>> ✅ OmniSwarm Hub is fully active and running 24/7 in background." -ForegroundColor Green
+    # Verify Port 5565
+    Start-Sleep -Seconds 2
+    $conn = Get-NetTCPConnection -LocalPort 5565 -State Listen -ErrorAction SilentlyContinue
+    if ($conn) {
+        Write-Host "`n    [OK] OmniOS Kernel listening on port 5565 (Virtual Hub: bore.pub:33458)" -ForegroundColor Green
+    } else {
+        Write-Host "`n    [WARN] Port 5565 not listening yet. Check $HUB_LOG for details." -ForegroundColor Yellow
+    }
 }
 
 function Stop-Hub {
-    Write-Host ">>> Stopping OmniSwarm Hub Services..." -ForegroundColor Yellow
+    Write-Host "`n>>> [OmniSwarm PC Hub] Stopping Background Services..." -ForegroundColor Cyan
 
-    foreach ($pair in @(
-        @{ File=$AgentPidFile; Name="PCAgent Loop" },
-        @{ File=$BorePidFile; Name="Bore Tunnel" },
-        @{ File=$HubPidFile; Name="OmniOS Kernel" }
-    )) {
-        $proc = Test-ProcessAlive $pair.File
-        if ($proc) {
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-            Write-Host "    • Stopped $($pair.Name) (PID: $($proc.Id))" -ForegroundColor Green
-        }
-        if (Test-Path $pair.File) { Remove-Item $pair.File -Force -ErrorAction SilentlyContinue }
+    # 1. Stop PCAgent Loop
+    $agentPid = Get-StoredPid $AGENT_PID_FILE
+    if ($agentPid -gt 0) {
+        Stop-Process -Id $agentPid -Force -ErrorAction SilentlyContinue
     }
-    Write-Host ">>> ✅ All Hub services stopped." -ForegroundColor Green
+    if (Test-Path $AGENT_PID_FILE) { Remove-Item $AGENT_PID_FILE -Force -ErrorAction SilentlyContinue }
+    Write-Host "    [OK] PCAgent Loop stopped." -ForegroundColor Green
+
+    # 2. Stop Bore Watchdog and bore.exe processes
+    $borePid = Get-StoredPid $BORE_PID_FILE
+    if ($borePid -gt 0) {
+        Stop-Process -Id $borePid -Force -ErrorAction SilentlyContinue
+    }
+    Get-Process -Name "bore" -ErrorAction SilentlyContinue | Stop-Process -Force
+    if (Test-Path $BORE_PID_FILE) { Remove-Item $BORE_PID_FILE -Force -ErrorAction SilentlyContinue }
+    Write-Host "    [OK] Bore Tunnel stopped." -ForegroundColor Green
+
+    # 3. Stop OmniOS Root Kernel
+    $hubPid = Get-StoredPid $HUB_PID_FILE
+    if ($hubPid -gt 0) {
+        Stop-Process -Id $hubPid -Force -ErrorAction SilentlyContinue
+    }
+    Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%omniswarm_daemon.py%'" -ErrorAction SilentlyContinue | 
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $HUB_PID_FILE) { Remove-Item $HUB_PID_FILE -Force -ErrorAction SilentlyContinue }
+    Write-Host "    [OK] OmniOS Root Kernel stopped." -ForegroundColor Green
 }
 
 function Get-HubStatus {
-    Write-Host "=== OmniSwarm Hub 24/7 Status ===" -ForegroundColor Cyan
-    $hubProc = Test-ProcessAlive $HubPidFile
-    $boreProc = Test-ProcessAlive $BorePidFile
-    $agentProc = Test-ProcessAlive $AgentPidFile
+    Write-Host "`n=======================================================" -ForegroundColor Magenta
+    Write-Host "     [OMNISWARM PC HUB 24/7 BACKGROUND STATUS]        " -ForegroundColor Magenta
+    Write-Host "=======================================================" -ForegroundColor Magenta
 
-    if ($hubProc) {
-        Write-Host "  • OmniOS Kernel : 🟢 RUNNING (PID: $($hubProc.Id), Port: 5565)" -ForegroundColor Green
+    # Check Kernel
+    $hubPid = Get-StoredPid $HUB_PID_FILE
+    $hubRunning = $hubPid -gt 0 -and (Is-ProcessRunning $hubPid)
+    $port5565 = Get-NetTCPConnection -LocalPort 5565 -State Listen -ErrorAction SilentlyContinue
+
+    if ($hubRunning -or $port5565) {
+        Write-Host "`n[OmniOS Kernel]     : [ONLINE]" -ForegroundColor Green
+        Write-Host "  PID               : $(if ($hubRunning) { $hubPid } else { 'External' })"
+        Write-Host "  Port 5565 (RPC)   : $(if ($port5565) { 'LISTENING' } else { 'WAITING' })"
     } else {
-        Write-Host "  • OmniOS Kernel : 🔴 STOPPED" -ForegroundColor Red
+        Write-Host "`n[OmniOS Kernel]     : [STOPPED]" -ForegroundColor Red
     }
 
-    if ($boreProc) {
-        Write-Host "  • Bore Tunnel   : 🟢 RUNNING (PID: $($boreProc.Id), Relay: bore.pub:33458)" -ForegroundColor Green
+    # Check Bore Tunnel
+    $borePid = Get-StoredPid $BORE_PID_FILE
+    $boreRunning = (Get-Process -Name "bore" -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0
+    if ($boreRunning) {
+        Write-Host "`n[Bore Tunnel]       : [ONLINE]" -ForegroundColor Green
+        Write-Host "  Endpoint          : bore.pub:33458 -> localhost:5565"
+        Write-Host "  Watchdog PID      : $(if ($borePid -gt 0) { $borePid } else { 'External' })"
     } else {
-        Write-Host "  • Bore Tunnel   : 🔴 STOPPED" -ForegroundColor Red
+        Write-Host "`n[Bore Tunnel]       : [STOPPED]" -ForegroundColor Red
     }
 
-    if ($agentProc) {
-        Write-Host "  • PCAgent Loop  : 🟢 RUNNING (PID: $($agentProc.Id))" -ForegroundColor Green
+    # Check PCAgent Loop
+    $agentPid = Get-StoredPid $AGENT_PID_FILE
+    $agentRunning = $agentPid -gt 0 -and (Is-ProcessRunning $agentPid)
+    if ($agentRunning) {
+        Write-Host "`n[PCAgent Loop]      : [ONLINE]" -ForegroundColor Green
+        Write-Host "  PID               : $agentPid"
     } else {
-        Write-Host "  • PCAgent Loop  : 🔴 STOPPED" -ForegroundColor Red
+        Write-Host "`n[PCAgent Loop]      : [STOPPED]" -ForegroundColor Red
+    }
+
+    # Check Windows Startup
+    $autoboot = Test-Path $STARTUP_LNK
+    Write-Host "`n[Windows Auto-Boot] : $(if ($autoboot) { '[ENABLED]' } else { '[DISABLED]' })"
+
+    # Show Tail Logs
+    if (Test-Path $HUB_LOG) {
+        Write-Host "`n--- Recent Kernel Log ($HUB_LOG) ---" -ForegroundColor Cyan
+        Get-Content $HUB_LOG -Tail 5 -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $BORE_LOG) {
+        Write-Host "`n--- Recent Bore Log ($BORE_LOG) ---" -ForegroundColor Cyan
+        Get-Content $BORE_LOG -Tail 5 -ErrorAction SilentlyContinue
+    }
+    Write-Host "=======================================================`n" -ForegroundColor Magenta
+}
+
+function Enable-AutoBoot {
+    Write-Host "`n>>> [OmniSwarm PC Hub] Configuring Windows Startup Auto-Boot..." -ForegroundColor Cyan
+    $wsh = New-Object -ComObject WScript.Shell
+    $shortcut = $wsh.CreateShortcut($STARTUP_LNK)
+    $shortcut.TargetPath = "wscript.exe"
+    $shortcut.Arguments = "`"$SILENT_VBS`""
+    $shortcut.WorkingDirectory = $WORKSPACE
+    $shortcut.Description = "OmniSwarm PC Hub Silent Background Daemon"
+    $shortcut.Save()
+    Write-Host "    [OK] Auto-Boot shortcut installed to: $STARTUP_LNK" -ForegroundColor Green
+    Write-Host "    OmniSwarm PC Hub will now launch automatically on Windows login!" -ForegroundColor Green
+}
+
+function Disable-AutoBoot {
+    Write-Host "`n>>> [OmniSwarm PC Hub] Disabling Windows Startup Auto-Boot..." -ForegroundColor Cyan
+    if (Test-Path $STARTUP_LNK) {
+        Remove-Item $STARTUP_LNK -Force
+        Write-Host "    [OK] Auto-Boot shortcut removed." -ForegroundColor Green
+    } else {
+        Write-Host "    Auto-Boot was not enabled." -ForegroundColor Yellow
     }
 }
 
 switch ($Action) {
-    "start"   { Start-Hub }
-    "stop"    { Stop-Hub }
-    "status"  { Get-HubStatus }
-    "restart" { Stop-Hub; Start-Sleep -Seconds 1; Start-Hub }
+    "start"            { Start-Hub }
+    "stop"             { Stop-Hub }
+    "status"           { Get-HubStatus }
+    "restart"          { Stop-Hub; Start-Sleep -Seconds 2; Start-Hub }
+    "enable-autoboot"  { Enable-AutoBoot }
+    "disable-autoboot" { Disable-AutoBoot }
 }

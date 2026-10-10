@@ -1,6 +1,7 @@
 import json
 import asyncio
 import os
+import subprocess
 from typing import Dict
 import threading
 import queue
@@ -148,16 +149,21 @@ class MCPMeshBroker:
             if tool_name == "compute_res_execute_bash":
                 cmd = args.get("cmd", "")
                 if "Stop-Process" in cmd or "taskkill" in cmd.lower():
-                    print(f"[SECURITY] Blocked malicious self-termination command from Phone Agent: {cmd}")
+                    print(f"[SECURITY] Blocked malicious self-termination command from remote node: {cmd}")
                     return {"status": "error", "message": "Blocked self-termination command."}
                 
-                # Ensure execution is non-blocking to protect the asyncio loop!
                 exec_cwd = args.get("cwd", os.getcwd())
-                process = await asyncio.create_subprocess_shell(
-                    cmd, cwd=exec_cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-                )
-                stdout, stderr = await process.communicate()
-                return {"status": "success", "stdout": stdout.decode(), "stderr": stderr.decode()}
+                def _run():
+                    try:
+                        res = subprocess.run(
+                            cmd, shell=True, capture_output=True, text=True, cwd=exec_cwd, timeout=60
+                        )
+                        return {"status": "success", "stdout": res.stdout, "stderr": res.stderr, "returncode": res.returncode}
+                    except subprocess.TimeoutExpired:
+                        return {"status": "error", "message": "Command timed out (60s limit)"}
+                    except Exception as err:
+                        return {"status": "error", "message": str(err)}
+                return await asyncio.to_thread(_run)
             elif tool_name == "ping_edge_node":
                 return {"status": "success", "message": "pong"}
             elif tool_name in ["synty_chat_post", "synty_chat_read", "synty_chat_rooms"]:

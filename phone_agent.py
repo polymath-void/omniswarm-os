@@ -142,8 +142,12 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
     await harness.send_agent_message("PCAgent", "PhoneAgent-Termux is online in Autonomous Mode. Ready for tasks.", data=device_info)
 
     # Find highest message ID to avoid replaying historic messages
-    initial_messages = await harness.read_my_messages(since_id=0, limit=500)
-    last_msg_id = max([m["id"] for m in initial_messages], default=0)
+    try:
+        latest_ids = await harness.get_latest_ids()
+        last_msg_id = latest_ids.get("latest_message_id", 0)
+    except Exception:
+        initial_messages = await harness.read_my_messages(since_id=0, limit=500)
+        last_msg_id = max([m["id"] for m in initial_messages], default=0)
     
     heartbeat_interval = 45.0
     last_heartbeat = time.time()
@@ -153,8 +157,9 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
         try:
             # 1. Poll incoming directives
             messages = await harness.read_my_messages(since_id=last_msg_id, limit=20)
-            for msg in messages:
-                last_msg_id = max(last_msg_id, msg["id"])
+            if messages:
+                # Always advance watermark past all retrieved messages to prevent re-querying
+                last_msg_id = max(last_msg_id, max(m["id"] for m in messages))
 
             valid_msgs = [m for m in messages if m.get("sender") not in [AGENT_ID, "PhoneAgent-Termux"]]
             
