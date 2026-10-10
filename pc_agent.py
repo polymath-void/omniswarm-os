@@ -10,6 +10,8 @@ import sys
 import json
 import asyncio
 import time
+import platform
+import subprocess
 from typing import Dict, Any, Optional
 
 if sys.stdout.encoding != 'utf-8':
@@ -121,12 +123,181 @@ async def live_log_watcher(harness: OmniOSAgentHarness):
         except Exception:
             await asyncio.sleep(2.0)
 
+def get_pc_device_info() -> Dict[str, Any]:
+    info = {
+        "device_type": f"Windows PC ({platform.machine()})",
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "pid": os.getpid()
+    }
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        info["memory_total_mb"] = round(mem.total / (1024 * 1024), 1)
+        info["memory_available_mb"] = round(mem.available / (1024 * 1024), 1)
+        info["memory_percent_used"] = mem.percent
+    except Exception:
+        pass
+    return info
+
+async def execute_pc_local_shell(command: str) -> Dict[str, Any]:
+    """Safely executes a shell command on the PC and captures stdout/stderr."""
+    def _run():
+        try:
+            res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
+            return {
+                "stdout": res.stdout,
+                "stderr": res.stderr,
+                "returncode": res.returncode,
+                "success": res.returncode == 0
+            }
+        except subprocess.TimeoutExpired:
+            return {"error": "Execution timed out (120s limit)", "success": False, "returncode": -1}
+        except Exception as e:
+            return {"error": str(e), "success": False, "returncode": -1}
+
+    return await asyncio.to_thread(_run)
+
+async def run_autonomous_loop(harness: OmniOSAgentHarness):
+    """
+    Continuous Zero-HIL Event Loop on the PC.
+    Listens for PhoneAgent instructions, executes tasks, streams live logs, and replies autonomously.
+    """
+    print(f"\n{MAGENTA}{BOLD}======================================================={RESET}")
+    print(f"{MAGENTA}{BOLD}  ⚡ ZERO-HIL AUTONOMOUS EVENT LOOP ACTIVATED (PC)     {RESET}")
+    print(f"{MAGENTA}{BOLD}  Listening for PhoneAgent Directives via Swarm Mesh...{RESET}")
+    print(f"{MAGENTA}{BOLD}======================================================={RESET}\n")
+
+    device_info = get_pc_device_info()
+    await harness.post_agent_log(f"PC Agent entering Zero-HIL Loop on {device_info['device_type']}")
+    await harness.send_agent_message("PhoneAgent-Termux", "PCAgent is online in Autonomous Mode. Ready for tasks.", data=device_info)
+
+    initial_messages = await harness.read_my_messages(since_id=0, limit=50)
+    last_msg_id = max([m["id"] for m in initial_messages], default=0)
+
+    heartbeat_interval = 45.0
+    last_heartbeat = time.time()
+
+    while True:
+        try:
+            messages = await harness.read_my_messages(since_id=last_msg_id, limit=20)
+            for msg in messages:
+                last_msg_id = max(last_msg_id, msg["id"])
+                sender = msg.get("sender", "Unknown")
+                if sender == AGENT_ID or "PCAgent" in sender:
+                    continue  # Ignore messages sent by self
+                text = msg.get("message", "")
+                data = msg.get("data") or {}
+
+                print(f"\n{CYAN}📩 [Directive Received #{msg['id']}] from {BOLD}{sender}{RESET}: {text}")
+                await harness.post_agent_log(f"Processing directive #{msg['id']} from {sender}: {text[:80]}")
+
+                # Determine action type
+                action = data.get("action")
+                if not action:
+                    if text.startswith("exec:"):
+                        action = "exec_shell"
+                        data["cmd"] = text[5:].strip()
+                    elif text.lower() in ["health", "health_check", "status"]:
+                        action = "health_check"
+                    elif text.lower() in ["ping", "are you alive?"]:
+                        action = "ping"
+                    elif text.lower() in ["git_sync", "git pull", "sync"]:
+                        action = "git_sync"
+                    elif text.lower() in ["verify", "verify_install"]:
+                        action = "verify_install"
+                    else:
+                        action = "echo"
+
+                # Dispatch Action
+                if action == "exec_shell":
+                    cmd = data.get("cmd") or ""
+                    print(f"    {YELLOW}▶ Executing Shell Command on PC:{RESET} {cmd}")
+                    await harness.post_agent_log(f"PC Executing: {cmd}")
+                    exec_result = await execute_pc_local_shell(cmd)
+
+                    status_flag = "SUCCESS" if exec_result.get("success") else "FAILED"
+                    stdout_peek = (exec_result.get("stdout") or exec_result.get("error") or "")[:200].strip()
+                    await harness.post_agent_log(f"Result [{status_flag}]: {stdout_peek}")
+
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message=f"Command '{cmd}' completed ({status_flag})",
+                        data=exec_result
+                    )
+                    print(f"    {GREEN}✅ Result streamed back to {sender}{RESET}")
+
+                elif action == "health_check":
+                    print(f"    {YELLOW}▶ Gathering PC Telemetry...{RESET}")
+                    health_data = get_pc_device_info()
+                    await harness.post_agent_log(f"Telemetry: PC Memory {health_data.get('memory_available_mb', 'N/A')}MB free")
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message="PC Device Health & Telemetry Report",
+                        data=health_data
+                    )
+                    print(f"    {GREEN}✅ Telemetry sent to {sender}{RESET}")
+
+                elif action == "verify_install":
+                    print(f"    {YELLOW}▶ Running verify_install.py on PC...{RESET}")
+                    res = await execute_pc_local_shell(f"{sys.executable} verify_install.py")
+                    await harness.post_agent_log(f"Verification output: {res.get('stdout', '')[:200]}")
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message="Verification Complete",
+                        data=res
+                    )
+                    print(f"    {GREEN}✅ Verification report returned to {sender}{RESET}")
+
+                elif action == "git_sync":
+                    print(f"    {YELLOW}▶ Running git pull origin main on PC...{RESET}")
+                    res = await execute_pc_local_shell("git pull origin main")
+                    await harness.post_agent_log(f"Git Sync: {res.get('stdout', '')[:200]}")
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message="Git Sync Complete",
+                        data=res
+                    )
+                    print(f"    {GREEN}✅ Git Sync reported to {sender}{RESET}")
+
+                elif action == "ping":
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message="PONG! PCAgent is fully operational on Windows Hub.",
+                        data={"uptime": time.time() - last_heartbeat}
+                    )
+                    print(f"    {GREEN}✅ Pong sent to {sender}{RESET}")
+
+                else:
+                    reply_text = f"Acknowledged: '{text}'. Ready for directives."
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message=reply_text,
+                        data={"handled_at": time.time()}
+                    )
+                    print(f"    {GREEN}✅ Acknowledged to {sender}{RESET}")
+
+            # Periodic Heartbeat
+            if time.time() - last_heartbeat > heartbeat_interval:
+                await harness.post_agent_log("Heartbeat: Autonomous PC Agent healthy, listening on Swarm Mesh.")
+                last_heartbeat = time.time()
+
+            await asyncio.sleep(2.5)
+
+        except asyncio.CancelledError:
+            print(f"\n{YELLOW}Stopping Autonomous Loop...{RESET}")
+            break
+        except Exception as e:
+            print(f"{YELLOW}Loop Notice: {e}{RESET}")
+            await asyncio.sleep(3.0)
+
 async def main():
     args = sys.argv[1:]
     
     if not args or args[0] in ["--help", "-h", "help"]:
         print(f"\n{CYAN}OmniSwarm PC Agent & Autonomous Bridge Controller{RESET}")
         print("Usage:")
+        print("  python pc_agent.py loop                           # Run 24/7 autonomous Zero-HIL event loop")
         print("  python pc_agent.py send <recipient> <message>     # Send message & wait for response")
         print("  python pc_agent.py exec <recipient> <command>     # Remote shell execution on edge node")
         print("  python pc_agent.py health <recipient>             # Query edge node hardware health")
@@ -138,7 +309,9 @@ async def main():
     cmd = args[0]
     
     async with OmniOSAgentHarness(agent_id=AGENT_ID, host="127.0.0.1", rpc_port=5565) as harness:
-        if cmd == "send":
+        if cmd in ["loop", "--loop-only", "--daemon", "daemon"]:
+            await run_autonomous_loop(harness)
+        elif cmd == "send":
             recipient = args[1] if len(args) > 1 else "PhoneAgent-Termux"
             message = " ".join(args[2:]) if len(args) > 2 else "Hello from PC Agent"
             await dispatch_directive_and_wait(harness, recipient, message)

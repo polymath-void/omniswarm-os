@@ -35,3 +35,7 @@ ngrok.log
 pinggy.log
 
 synty_chat_ledger.jsonl
+*.pid
+.*.pid
+*.log
+*.egg-info/
