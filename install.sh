@@ -118,6 +118,10 @@ with open('mesh_config.json', 'w') as f:
 print('>>> mesh_config.json created successfully.')
 "
 
+# 4.5 Provision Permanent Antigravity System Rules
+echo ">>> [System Rules] Provisioning permanent Antigravity system rules..."
+$PYTHON_BIN scripts/inject_system_rules.py --role "$ROLE" --workspace "$SCRIPT_DIR" || true
+
 # 5. Run Self-Verification Diagnostics
 echo ">>> [Diagnostics] Running verification test suite..."
 $PYTHON_BIN verify_install.py

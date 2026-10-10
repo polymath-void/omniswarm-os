@@ -116,6 +116,10 @@ $jsonContent = $configObj | ConvertTo-Json -Depth 3
 [System.IO.File]::WriteAllText((Join-Path $ScriptDir "mesh_config.json"), $jsonContent, [System.Text.UTF8Encoding]::new($false))
 Write-Host ">>> [Config] mesh_config.json created." -ForegroundColor Green
 
+# 7.5 Provision Permanent Antigravity System Rules
+Write-Host ">>> [System Rules] Provisioning permanent Antigravity system rules..." -ForegroundColor Yellow
+& $venvPython (Join-Path $ScriptDir "scripts\inject_system_rules.py") --role $Role.ToLower() --workspace $ScriptDir
+
 # 8. Run Self-Verification Diagnostics
 Write-Host ">>> [Diagnostics] Running verification test suite..." -ForegroundColor Yellow
 & $venvPython (Join-Path $ScriptDir "verify_install.py")
