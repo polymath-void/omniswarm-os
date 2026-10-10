@@ -50,9 +50,18 @@ class OmniOSAgentHarness:
         target_host = host or self.host
         if not self._connected:
             self.req_socket = self.ctx.socket(zmq.REQ)
+            
+            # [Tailscale Userspace Networking Patch] 
+            # Termux does not have TUN access. Route ZMQ through the Tailscale SOCKS5 proxy if on Android!
+            if hasattr(sys, 'getandroidapilevel') or "com.termux" in os.environ.get("PREFIX", ""):
+                print(f"[Harness:{self.agent_id}] Android detected. Tunneling ZMQ via Tailscale SOCKS5 (127.0.0.1:1055)...")
+                self.req_socket.setsockopt_string(zmq.SOCKS_PROXY, "127.0.0.1:1055")
+                
             self.req_socket.connect(f"tcp://{target_host}:{rpc_port}")
             
             self.sub_socket = self.ctx.socket(zmq.SUB)
+            if hasattr(sys, 'getandroidapilevel') or "com.termux" in os.environ.get("PREFIX", ""):
+                self.sub_socket.setsockopt_string(zmq.SOCKS_PROXY, "127.0.0.1:1055")
             self.sub_socket.connect(f"tcp://{target_host}:{pub_port}")
             
             self._connected = True
