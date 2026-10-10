@@ -22,6 +22,19 @@
         "hub_endpoint": "bore.pub:33458"
       },
       "timestamp": 1791668664.8555274
+    },
+    {
+      "agent_id": "PhoneAgent-Termux",
+      "status": "suspended_by_agent",
+      "saved_state": {
+        "agent": "PhoneAgent-Termux",
+        "device": "Android Termux",
+        "timestamp": 1791670301.2431915,
+        "status": "COLLABORATION_VERIFIED",
+        "skills_accessible": 140,
+        "hub_endpoint": "bore.pub:33458"
+      },
+      "timestamp": 1791670301.2605371
     }
   ]
 }
