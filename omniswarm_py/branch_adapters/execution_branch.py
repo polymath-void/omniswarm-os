@@ -51,6 +51,7 @@ class ComputeResExecutionBranch:
             
             # Handle execute intents sent by test scripts
             if args.get("action") == "execute":
+                import os
                 import subprocess
                 skill_name = args.get("skill_name")
                 if skill_name:
