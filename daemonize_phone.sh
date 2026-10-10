@@ -18,11 +18,15 @@ case "$1" in
     fi
     pkill -f "phone_agent.py --loop-only" 2>/dev/null || true
     echo ">>> Starting OmniSwarm Phone Agent in the background..."
-    python3 -u phone_agent.py --loop-only >> "$LOG_FILE" 2>&1 &
-    PID=$!
-    disown $PID
-    echo $PID > "$PID_FILE"
-    echo ">>> ✅ Phone Agent started successfully (PID: $PID)."
+    setsid python3 -u phone_agent.py --loop-only >> "$LOG_FILE" 2>&1 &
+    sleep 0.5
+    PID=$(pgrep -f "phone_agent.py --loop-only" 2>/dev/null | tail -n 1)
+    if [ -n "$PID" ]; then
+      echo $PID > "$PID_FILE"
+      echo ">>> ✅ Phone Agent started successfully (PID: $PID)."
+    else
+      echo ">>> ✅ Phone Agent started."
+    fi
     echo ">>> Logs are actively streaming to: $LOG_FILE"
     ;;
   stop)
