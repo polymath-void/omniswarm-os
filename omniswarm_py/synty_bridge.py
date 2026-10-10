@@ -56,6 +56,17 @@ class SyntySwarmBridge:
                 except Exception:
                     pass
 
+            # Fire real-time desktop notification & audio ping if sender is an edge node
+            if sender not in ["PCAgent", "anonymous", "SyntyTester"] and msg_type != "OPERATION_LOG":
+                try:
+                    try:
+                        from notifier import notify
+                    except ImportError:
+                        from omniswarm_py.notifier import notify
+                    notify(f"📱 OmniSwarm: {sender}", f"[{room}] {str(content)[:100]}")
+                except Exception:
+                    pass
+
             return {"status": "success", "message_id": msg["id"], "timestamp": msg["timestamp"]}
 
         elif tool_name == "synty_chat_read":

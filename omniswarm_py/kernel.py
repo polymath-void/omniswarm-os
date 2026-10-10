@@ -171,7 +171,18 @@ class OmniOSRootKernel:
                 return self.intent_gc.sweep_completed_intents()
             if tool_name == "swarm_send_message":
                 sender = args.get("sender") or args.get("agent_id") or "AnonymousAgent"
-                return self.comms_bus.send_message(sender, args.get("recipient", "*"), args.get("message", ""), args.get("data"))
+                msg_text = args.get("message", "")
+                res = self.comms_bus.send_message(sender, args.get("recipient", "*"), msg_text, args.get("data"))
+                if sender not in ["PCAgent", "Verifier"]:
+                    try:
+                        try:
+                            from notifier import notify
+                        except ImportError:
+                            from omniswarm_py.notifier import notify
+                        notify(f"📱 OmniSwarm: {sender}", msg_text[:100])
+                    except Exception:
+                        pass
+                return res
             if tool_name == "swarm_read_messages":
                 agent = args.get("agent_id") or args.get("recipient")
                 return {"status": "success", "messages": self.comms_bus.get_messages(agent, args.get("since_id", 0), args.get("limit", 20))}

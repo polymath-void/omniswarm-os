@@ -147,21 +147,34 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
     
     heartbeat_interval = 45.0
     last_heartbeat = time.time()
+    idle_cycles = 0
 
     while True:
         try:
             # 1. Poll incoming directives
             messages = await harness.read_my_messages(since_id=last_msg_id, limit=20)
-            for msg in messages:
+            valid_msgs = [m for m in messages if m.get("sender") not in [AGENT_ID, "PhoneAgent-Termux"]]
+            
+            if valid_msgs:
+                idle_cycles = 0
+            else:
+                idle_cycles += 1
+
+            for msg in valid_msgs:
                 last_msg_id = max(last_msg_id, msg["id"])
                 sender = msg.get("sender", "Unknown")
-                if sender == AGENT_ID or "PhoneAgent" in sender:
-                    continue  # Ignore messages sent by self
                 text = msg.get("message", "")
                 data = msg.get("data") or {}
                 
                 print(f"\n{CYAN}📩 [Directive Received #{msg['id']}] from {BOLD}{sender}{RESET}: {text}")
                 await harness.post_agent_log(f"Processing directive #{msg['id']} from {sender}: {text[:80]}")
+
+                # Trigger native Android Termux notification & vibration
+                try:
+                    from omniswarm_py.notifier import notify
+                    notify("OmniSwarm Task Directive", f"From {sender}: {text[:80]}")
+                except Exception:
+                    pass
 
                 # Determine action type
                 action = data.get("action")
@@ -254,14 +267,27 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                 await harness.post_agent_log("Heartbeat: Autonomous Phone Agent healthy, listening on Swarm Mesh.")
                 last_heartbeat = time.time()
 
-            await asyncio.sleep(2.5)
+            # Adaptive Battery-Saver Idle Backoff:
+            # Active tasks get 1s latency; idle standby drops CPU/battery drain to zero.
+            if idle_cycles == 0:
+                sleep_interval = 1.0
+            elif idle_cycles < 15:
+                sleep_interval = 3.0
+            elif idle_cycles < 30:
+                sleep_interval = 10.0
+            elif idle_cycles < 60:
+                sleep_interval = 30.0
+            else:
+                sleep_interval = 60.0
+
+            await asyncio.sleep(sleep_interval)
 
         except asyncio.CancelledError:
             print(f"\n{YELLOW}Stopping Autonomous Loop...{RESET}")
             break
         except Exception as e:
             print(f"{YELLOW}Loop Notice: {e}{RESET}")
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(5.0)
 
 async def main():
     print(f"\n{CYAN}======================================================={RESET}")
