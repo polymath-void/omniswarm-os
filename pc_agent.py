@@ -20,6 +20,12 @@ if sys.stdout.encoding != 'utf-8':
     except Exception:
         pass
 
+if sys.platform == 'win32':
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
 
@@ -40,7 +46,7 @@ async def dispatch_directive_and_wait(
     recipient: str,
     message: str,
     data: Optional[Dict[str, Any]] = None,
-    timeout: float = 30.0
+    timeout: float = 45.0
 ) -> Dict[str, Any]:
     """
     Sends a directive to an edge node, live-streams operational logs while waiting,

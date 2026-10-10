@@ -8,6 +8,12 @@ if sys.stdout.encoding != 'utf-8':
     except AttributeError:
         pass
 
+if sys.platform == 'win32':
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 
 import os
 import json
