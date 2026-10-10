@@ -187,3 +187,44 @@ class OmniOSAgentHarness:
             
         await asyncio.to_thread(_write_state)
         print(f"[Harness:{self.agent_id}] Intent cleanly serialized to workflow.json")
+
+    # =========================================================================
+    # SyntyChat Zero-HIL Communication Methods
+    # =========================================================================
+
+    async def chat_post(self, room: str, content: Any, msg_type: str = "chat", metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Post a message or log to a SyntyChat room."""
+        return await self.execute_in_swarm("synty_chat_post", {
+            "room": room,
+            "sender": self.agent_id,
+            "content": content,
+            "type": msg_type,
+            "metadata": metadata or {}
+        })
+
+    async def chat_read(self, room: str, since_timestamp: float = 0.0, limit: int = 50) -> List[Dict[str, Any]]:
+        """Read recent messages from a SyntyChat room."""
+        res = await self.execute_in_swarm("synty_chat_read", {
+            "room": room,
+            "since_timestamp": since_timestamp,
+            "limit": limit
+        })
+        return res.get("messages", [])
+
+    async def chat_stream_log(self, room: str, log_line: str, level: str = "INFO") -> Dict[str, Any]:
+        """Stream an operations log line to the room in real time."""
+        return await self.chat_post(
+            room=room,
+            content=log_line,
+            msg_type="OPERATION_LOG",
+            metadata={"level": level, "platform": sys.platform}
+        )
+
+    async def chat_send_directive(self, room: str, target_agent: str, action: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Dispatch an autonomous task directive to another agent without HIL."""
+        return await self.chat_post(
+            room=room,
+            content={"action": action, "target": target_agent, "payload": payload},
+            msg_type="TASK_DIRECTIVE",
+            metadata={"target_agent": target_agent, "action": action}
+        )

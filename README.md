@@ -94,3 +94,20 @@ async def my_agent():
 
 asyncio.run(my_agent())
 ```
+
+---
+
+## Zero-HIL Autonomous Communication: SyntyChatServer
+
+To eliminate manual copy-pasting between agents on different devices, launch the **SyntyChat Autonomous Bridge**:
+
+```bash
+# On PC (Hub):
+python syntychat_bridge_daemon.py --agent-id PCAgent --room swarm_dev
+
+# On Android (Termux):
+python syntychat_bridge_daemon.py --agent-id PhoneAgent --room swarm_dev
+```
+
+Agents will continuously stream operations logs to `ops_stream` and exchange autonomous task directives without human-in-the-loop intervention. See [`docs/SYNTY_CHAT_ARCHITECTURE.md`](docs/SYNTY_CHAT_ARCHITECTURE.md) for complete specifications.
+

@@ -132,6 +132,9 @@ class OmniOSRootKernel:
         self.mesh.register_tool(name="ping_edge_node", schema={"returns": "pong"})
         self.mesh.register_tool(name="trigger_intent_gc", schema={"description": "Cleans up completed intents instantly."})
         self.mesh.register_tool(name="query_os_events", schema={"parameters": {"since_timestamp": "float"}})
+        self.mesh.register_tool(name="synty_chat_post", schema={"parameters": {"room": "string", "content": "any"}})
+        self.mesh.register_tool(name="synty_chat_read", schema={"parameters": {"room": "string", "since_timestamp": "float"}})
+        self.mesh.register_tool(name="synty_chat_rooms", schema={"parameters": {}})
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
@@ -142,6 +145,10 @@ class OmniOSRootKernel:
             
         original_handler = self.mesh.handle_incoming_request
         async def hooked_handler(tool_name: str, args: dict):
+            if tool_name in ["synty_chat_post", "synty_chat_read", "synty_chat_rooms"]:
+                from .synty_bridge import SyntySwarmBridge
+                bridge = SyntySwarmBridge(broker=self.mesh)
+                return await bridge.handle_chat_rpc(tool_name, args)
             if tool_name == "query_os_events":
                 return {"status": "success", "events": self.event_ledger.query_events_since(args.get("since_timestamp", 0.0))}
             if tool_name == "trigger_intent_gc":
