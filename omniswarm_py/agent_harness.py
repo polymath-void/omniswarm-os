@@ -187,9 +187,20 @@ class OmniOSAgentHarness:
             
         await asyncio.to_thread(_write_state)
         print(f"[Harness:{self.agent_id}] Intent cleanly serialized to workflow.json")
+        # Also sync across the network to the Hub's central workflow ledger!
+        try:
+            dump_dict = {
+                "agent_id": self.agent_id,
+                "status": "suspended_by_agent",
+                "saved_state": current_state,
+                "timestamp": time.time()
+            }
+            await self.execute_in_swarm("swarm_sync_intent", {"intent": dump_dict}, timeout=3.0)
+        except Exception:
+            pass
 
     # =========================================================================
-    # SyntyChat Zero-HIL Communication Methods
+    # SyntyChat Zero-HIL Communication Methods (Room & Topic Based)
     # =========================================================================
 
     async def chat_post(self, room: str, content: Any, msg_type: str = "chat", metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -211,6 +222,28 @@ class OmniOSAgentHarness:
         })
         return res.get("messages", [])
 
+    # =========================================================================
+    # SwarmComms Direct P2P Messaging Methods (Agent-to-Agent)
+    # =========================================================================
+
+    async def send_agent_message(self, recipient: str, message: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Sends a direct message to another agent in the swarm across devices."""
+        return await self.execute_in_swarm("swarm_send_message", {
+            "sender": self.agent_id,
+            "recipient": recipient,
+            "message": message,
+            "data": data or {}
+        })
+
+    async def read_my_messages(self, since_id: int = 0, limit: int = 20) -> List[Dict[str, Any]]:
+        """Reads all incoming messages addressed to this agent."""
+        res = await self.execute_in_swarm("swarm_read_messages", {
+            "agent_id": self.agent_id,
+            "since_id": since_id,
+            "limit": limit
+        })
+        return res.get("messages", [])
+
     async def chat_stream_log(self, room: str, log_line: str, level: str = "INFO") -> Dict[str, Any]:
         """Stream an operations log line to the room in real time."""
         return await self.chat_post(
@@ -228,3 +261,23 @@ class OmniOSAgentHarness:
             msg_type="TASK_DIRECTIVE",
             metadata={"target_agent": target_agent, "action": action}
         )
+
+    # =========================================================================
+    # SwarmComms Direct P2P Log Streaming Methods (Agent-to-Agent)
+    # =========================================================================
+
+    async def post_agent_log(self, message: str, level: str = "INFO") -> Dict[str, Any]:
+        """Streams an operational log to the swarm so other agents can see live progress."""
+        return await self.execute_in_swarm("swarm_post_log", {
+            "agent_id": self.agent_id,
+            "log_level": level,
+            "message": message
+        })
+
+    async def stream_agent_logs(self, agent_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Reads live operational logs from another agent or all swarm agents."""
+        res = await self.execute_in_swarm("swarm_stream_logs", {
+            "agent_id": agent_id,
+            "limit": limit
+        })
+        return res.get("logs", [])

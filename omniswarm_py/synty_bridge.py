@@ -14,15 +14,19 @@ import json
 import time
 import asyncio
 from typing import Dict, List, Any, Optional, Callable
-from .synty_chat import chat_server, SyntyClient, SyntyRoom
+try:
+    from synty_chat import chat_server, SyntyClient, SyntyRoom
+except ImportError:
+    from omniswarm_py.synty_chat import chat_server, SyntyClient, SyntyRoom
 
 class SyntySwarmBridge:
     """
     Connects the in-process SyntyChatServer with the external ZeroMQ Swarm bus.
     """
-    def __init__(self, broker=None):
+    def __init__(self, broker=None, comms_bus=None):
         self.server = chat_server
         self.broker = broker
+        self.comms_bus = comms_bus
 
     async def handle_chat_rpc(self, tool_name: str, args: dict) -> dict:
         """Handles incoming RPC calls from across the network."""
@@ -41,6 +45,17 @@ class SyntySwarmBridge:
                 payload = json.dumps(msg).encode("utf-8")
                 self.broker.send_queue.put(('pub_bcast', [topic, payload]))
                 
+            # Mirror to SwarmComms SQLite ledger for persistent unified cross-querying
+            if self.comms_bus:
+                try:
+                    if msg_type == "OPERATION_LOG":
+                        self.comms_bus.post_log(sender, meta.get("level", "INFO"), f"[{room}] {content}")
+                    else:
+                        target = meta.get("target_agent", "*")
+                        self.comms_bus.send_message(sender, target, f"[{room}] {content}", {"synty_id": msg["id"], "type": msg_type, "meta": meta})
+                except Exception:
+                    pass
+
             return {"status": "success", "message_id": msg["id"], "timestamp": msg["timestamp"]}
 
         elif tool_name == "synty_chat_read":

@@ -129,12 +129,25 @@ class OmniOSRootKernel:
         db_path = os.path.join(self.workspace_root, "agy_nodeos.db")
         self.event_ledger = EventLedger(db_path)
         
+        try:
+            from comms import SwarmCommsBus
+        except ImportError:
+            from omniswarm_py.comms import SwarmCommsBus
+        self.comms_bus = SwarmCommsBus(db_path, self.workspace_root)
+        
         self.mesh.register_tool(name="ping_edge_node", schema={"returns": "pong"})
         self.mesh.register_tool(name="trigger_intent_gc", schema={"description": "Cleans up completed intents instantly."})
         self.mesh.register_tool(name="query_os_events", schema={"parameters": {"since_timestamp": "float"}})
         self.mesh.register_tool(name="synty_chat_post", schema={"parameters": {"room": "string", "content": "any"}})
         self.mesh.register_tool(name="synty_chat_read", schema={"parameters": {"room": "string", "since_timestamp": "float"}})
         self.mesh.register_tool(name="synty_chat_rooms", schema={"parameters": {}})
+        
+        # Autonomous Agent-to-Agent Mesh Tools (Zero-HIL Architecture)
+        self.mesh.register_tool(name="swarm_send_message", schema={"parameters": {"recipient": "string", "message": "string"}})
+        self.mesh.register_tool(name="swarm_read_messages", schema={"parameters": {"since_id": "integer"}})
+        self.mesh.register_tool(name="swarm_post_log", schema={"parameters": {"log_level": "string", "message": "string"}})
+        self.mesh.register_tool(name="swarm_stream_logs", schema={"parameters": {"limit": "integer"}})
+        self.mesh.register_tool(name="swarm_sync_intent", schema={"parameters": {"intent": "object"}})
         
         if "Cognition" in self.branches and self.branches["Cognition"]:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
@@ -146,13 +159,31 @@ class OmniOSRootKernel:
         original_handler = self.mesh.handle_incoming_request
         async def hooked_handler(tool_name: str, args: dict):
             if tool_name in ["synty_chat_post", "synty_chat_read", "synty_chat_rooms"]:
-                from .synty_bridge import SyntySwarmBridge
-                bridge = SyntySwarmBridge(broker=self.mesh)
+                try:
+                    from synty_bridge import SyntySwarmBridge
+                except ImportError:
+                    from omniswarm_py.synty_bridge import SyntySwarmBridge
+                bridge = SyntySwarmBridge(broker=self.mesh, comms_bus=self.comms_bus)
                 return await bridge.handle_chat_rpc(tool_name, args)
             if tool_name == "query_os_events":
                 return {"status": "success", "events": self.event_ledger.query_events_since(args.get("since_timestamp", 0.0))}
             if tool_name == "trigger_intent_gc":
                 return self.intent_gc.sweep_completed_intents()
+            if tool_name == "swarm_send_message":
+                sender = args.get("sender") or args.get("agent_id") or "AnonymousAgent"
+                return self.comms_bus.send_message(sender, args.get("recipient", "*"), args.get("message", ""), args.get("data"))
+            if tool_name == "swarm_read_messages":
+                agent = args.get("agent_id") or args.get("recipient")
+                return {"status": "success", "messages": self.comms_bus.get_messages(agent, args.get("since_id", 0), args.get("limit", 20))}
+            if tool_name == "swarm_post_log":
+                agent = args.get("agent_id") or "AnonymousAgent"
+                return self.comms_bus.post_log(agent, args.get("log_level", "INFO"), args.get("message", ""))
+            if tool_name == "swarm_stream_logs":
+                return {"status": "success", "logs": self.comms_bus.get_logs(args.get("agent_id"), args.get("limit", 50))}
+            if tool_name == "swarm_sync_intent":
+                intent = args.get("intent", {})
+                success = self.comms_bus.sync_workflow_intent(intent)
+                return {"status": "success" if success else "error"}
             if tool_name in ["query_skills", "publish_skill", "adapt_and_publish_skill"] and "Execution" in self.branches:
                 return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "SKILL_ROUTER_INVOKE", "args": args})
             if tool_name == "query_holographic_ast" and "Cognition" in self.branches:

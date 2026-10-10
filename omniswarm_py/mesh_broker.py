@@ -157,7 +157,10 @@ class MCPMeshBroker:
             elif tool_name == "ping_edge_node":
                 return {"status": "success", "message": "pong"}
             elif tool_name in ["synty_chat_post", "synty_chat_read", "synty_chat_rooms"]:
-                from .synty_bridge import SyntySwarmBridge
+                try:
+                    from synty_bridge import SyntySwarmBridge
+                except ImportError:
+                    from omniswarm_py.synty_bridge import SyntySwarmBridge
                 bridge = SyntySwarmBridge(broker=self)
                 return await bridge.handle_chat_rpc(tool_name, args)
             return {"status": "success", "result": f"Executed natively: {tool_name}"}
