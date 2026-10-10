@@ -3,6 +3,7 @@ setup.py
 omniswarm_os.egg-info/PKG-INFO
 omniswarm_os.egg-info/SOURCES.txt
 omniswarm_os.egg-info/dependency_links.txt
+omniswarm_os.egg-info/entry_points.txt
 omniswarm_os.egg-info/requires.txt
 omniswarm_os.egg-info/top_level.txt
 omniswarm_py/__init__.py
@@ -13,6 +14,7 @@ omniswarm_py/holographic_ast.py
 omniswarm_py/intent_gc.py
 omniswarm_py/kernel.py
 omniswarm_py/mesh_broker.py
+omniswarm_py/mesh_config.py
 omniswarm_py/omni_hub.py
 omniswarm_py/omniswarm_daemon.py
 omniswarm_py/void_governor.py

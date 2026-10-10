@@ -1,9 +1,9 @@
 {
-    "node_id":  "WindowsNode-DESKTOP-DBU3N3P",
-    "role":  "edge",
-    "hub_host":  "bore.pub",
-    "rpc_port":  33458,
-    "pub_port":  5566,
-    "auto_tunnel":  false,
-    "tunnel_provider":  "bore"
+  "node_id": "OmniNode-Linux-32495",
+  "role": "edge",
+  "hub_host": "bore.pub",
+  "rpc_port": 33458,
+  "pub_port": 5566,
+  "auto_tunnel": false,
+  "tunnel_provider": "bore"
 }

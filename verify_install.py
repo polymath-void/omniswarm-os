@@ -84,7 +84,7 @@ def main():
         import zmq
         ctx = zmq.Context.instance()
         sock = ctx.socket(zmq.REQ)
-        sock.setsockopt(zmq.RCVTIMEO, 2500)
+        sock.setsockopt(zmq.RCVTIMEO, 5000)
         sock.setsockopt(zmq.LINGER, 0)
         
         # SOCKS5 proxy check if on Android Termux and targeting Tailscale
