@@ -26,3 +26,11 @@ swarm_success.txt
 # Dynamic Symlinks
 ComputeRes
 polymath-jage
+
+bore.exe
+bore.log
+bore_err.log
+ngrok.exe
+ngrok.log
+pinggy.log
+

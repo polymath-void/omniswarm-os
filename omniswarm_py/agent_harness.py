@@ -25,11 +25,13 @@ class OmniOSAgentHarness:
     LLM-native capability discovery (JSON Schemas), and asynchronous event subscriptions.
     """
     
-    def __init__(self, agent_id: str, workspace_root: Optional[str] = None, host: str = "127.0.0.1"):
+    def __init__(self, agent_id: str, workspace_root: Optional[str] = None, host: str = "127.0.0.1", rpc_port: int = 5565, pub_port: int = 5566):
         self.agent_id = agent_id
         self.workspace_root = workspace_root or os.getcwd()
         self.workflow_file = os.path.join(self.workspace_root, "workflow.json")
         self.host = host
+        self.rpc_port = rpc_port
+        self.pub_port = pub_port
         
         # Optimized ZMQ Context Pooling
         self.ctx = zmq.asyncio.Context.instance()
@@ -39,7 +41,7 @@ class OmniOSAgentHarness:
 
     async def __aenter__(self):
         """Context manager support for clean socket initialization and teardown."""
-        await self.connect(host=self.host)
+        await self.connect(host=self.host, rpc_port=self.rpc_port, pub_port=self.pub_port)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -52,15 +54,16 @@ class OmniOSAgentHarness:
             self.req_socket = self.ctx.socket(zmq.REQ)
             
             # [Tailscale Userspace Networking Patch] 
-            # Termux does not have TUN access. Route ZMQ through the Tailscale SOCKS5 proxy if on Android!
-            if hasattr(sys, 'getandroidapilevel') or "com.termux" in os.environ.get("PREFIX", ""):
+            # If on Android and connecting to a Tailscale IP (100.x.x.x), use the local SOCKS5 proxy
+            is_android = hasattr(sys, 'getandroidapilevel') or "com.termux" in os.environ.get("PREFIX", "")
+            if is_android and target_host.startswith("100."):
                 print(f"[Harness:{self.agent_id}] Android detected. Tunneling ZMQ via Tailscale SOCKS5 (127.0.0.1:1055)...")
                 self.req_socket.setsockopt_string(zmq.SOCKS_PROXY, "127.0.0.1:1055")
                 
             self.req_socket.connect(f"tcp://{target_host}:{rpc_port}")
             
             self.sub_socket = self.ctx.socket(zmq.SUB)
-            if hasattr(sys, 'getandroidapilevel') or "com.termux" in os.environ.get("PREFIX", ""):
+            if is_android and target_host.startswith("100."):
                 self.sub_socket.setsockopt_string(zmq.SOCKS_PROXY, "127.0.0.1:1055")
             self.sub_socket.connect(f"tcp://{target_host}:{pub_port}")
             
