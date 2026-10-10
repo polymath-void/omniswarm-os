@@ -137,16 +137,19 @@ class OmniOSAgentHarness:
         if tool_name == "compute_res_execute_bash" and "cwd" not in args:
             args["cwd"] = os.getcwd()
         payload = json.dumps({"agent_id": self.agent_id, "tool": tool_name, "args": args})
-        await self.req_socket.send_string(payload)
-        
         try:
+            await self.req_socket.send_string(payload)
             response = await asyncio.wait_for(self.req_socket.recv_string(), timeout=timeout)
             return json.loads(response)
-        except asyncio.TimeoutError:
-            # Recreate socket to prevent ZMQ REQ/REP state machine lockup on timeout
-            self.req_socket.close()
+        except Exception as e:
+            # Recreate socket to prevent ZMQ REQ/REP state machine lockup on any network drop or error
+            try:
+                if self.req_socket:
+                    self.req_socket.close(linger=0)
+            except Exception:
+                pass
             self._connected = False
-            return {"status": "error", "message": "OmniOS Kernel Timeout. Mesh congested."}
+            return {"status": "error", "message": f"OmniOS Kernel Connection Error: {e}"}
 
     async def subscribe_to_events(self, topic: str = ""):
         """
