@@ -142,10 +142,12 @@ class OmniOSAgentHarness:
             response = await asyncio.wait_for(self.req_socket.recv_string(), timeout=timeout)
             return json.loads(response)
         except Exception as e:
-            # Recreate socket to prevent ZMQ REQ/REP state machine lockup on any network drop or error
+            print(f"[Harness:{self.agent_id}] RPC Error on '{tool_name}': {e}")
             try:
                 if self.req_socket:
                     self.req_socket.close(linger=0)
+                if self.sub_socket:
+                    self.sub_socket.close(linger=0)
             except Exception:
                 pass
             self._connected = False
