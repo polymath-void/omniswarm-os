@@ -2,7 +2,7 @@ import asyncio
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 
 async def query_pc_brain():
-    async with OmniOSAgentHarness(agent_id="PhoneAgent", host="192.168.0.111") as harness:
+    async with OmniOSAgentHarness(agent_id="PhoneAgent", host="100.77.91.63") as harness:
         print("🧠 Asking the PC's Cognition Branch a question...")
         
         # We are asking the PC to search its local Holographic AST SQLite database
