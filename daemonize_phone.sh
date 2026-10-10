@@ -17,8 +17,9 @@ case "$1" in
       exit 0
     fi
     echo ">>> Starting OmniSwarm Phone Agent in the background..."
-    nohup python3 phone_agent.py --loop-only >> "$LOG_FILE" 2>&1 &
-    echo $! > "$PID_FILE"
+    setsid python3 -u phone_agent.py --loop-only >> "$LOG_FILE" 2>&1 &
+    PID=$!
+    echo $PID > "$PID_FILE"
     echo ">>> ✅ Phone Agent started successfully (PID: $(cat "$PID_FILE"))."
     echo ">>> Logs are actively streaming to: $LOG_FILE"
     ;;
@@ -44,9 +45,9 @@ case "$1" in
     fi
     ;;
   restart)
-    $0 stop
+    bash "$0" stop
     sleep 1
-    $0 start
+    bash "$0" start
     ;;
   *)
     echo "Usage: bash daemonize_phone.sh {start|stop|status|restart}"
