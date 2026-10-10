@@ -16,11 +16,13 @@ case "$1" in
       echo ">>> Phone Agent is already running (PID: $(cat "$PID_FILE"))."
       exit 0
     fi
+    pkill -f "phone_agent.py --loop-only" 2>/dev/null || true
     echo ">>> Starting OmniSwarm Phone Agent in the background..."
-    setsid python3 -u phone_agent.py --loop-only >> "$LOG_FILE" 2>&1 &
+    python3 -u phone_agent.py --loop-only >> "$LOG_FILE" 2>&1 &
     PID=$!
+    disown $PID
     echo $PID > "$PID_FILE"
-    echo ">>> ✅ Phone Agent started successfully (PID: $(cat "$PID_FILE"))."
+    echo ">>> ✅ Phone Agent started successfully (PID: $PID)."
     echo ">>> Logs are actively streaming to: $LOG_FILE"
     ;;
   stop)
@@ -30,14 +32,25 @@ case "$1" in
       kill "$PID" 2>/dev/null || true
       rm -f "$PID_FILE"
       echo ">>> ✅ Phone Agent stopped."
-    else
-      echo ">>> No active Phone Agent PID file found. Checking process list..."
-      pkill -f "phone_agent.py --loop-only" || echo ">>> Phone Agent is not running."
     fi
+    pkill -f "phone_agent.py --loop-only" 2>/dev/null || true
+    rm -f "$PID_FILE"
+    echo ">>> ✅ Checked process list and cleared active agent processes."
     ;;
   status)
+    CURRENT_PID=""
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-      echo ">>> 🟢 Phone Agent is ACTIVE and RUNNING (PID: $(cat "$PID_FILE"))."
+      CURRENT_PID=$(cat "$PID_FILE")
+    else
+      FALLBACK_PID=$(pgrep -f "phone_agent.py --loop-only" 2>/dev/null | head -n 1)
+      if [ -n "$FALLBACK_PID" ]; then
+        CURRENT_PID=$FALLBACK_PID
+        echo $CURRENT_PID > "$PID_FILE"
+      fi
+    fi
+
+    if [ -n "$CURRENT_PID" ]; then
+      echo ">>> 🟢 Phone Agent is ACTIVE and RUNNING (PID: $CURRENT_PID)."
       echo ">>> Recent Activity Logs:"
       tail -n 10 "$LOG_FILE"
     else
