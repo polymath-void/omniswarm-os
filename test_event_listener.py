@@ -2,7 +2,7 @@ import asyncio
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 
 async def listen_to_swarm():
-    async with OmniOSAgentHarness(agent_id="PhoneAgent", host="100.77.91.63") as harness:
+    async with OmniOSAgentHarness(agent_id="PhoneAgent") as harness:
         print("🎧 Phone Agent is now listening to all global PC events. (Press Ctrl+C to stop)")
         
         # Subscribe to the global PUB/SUB bus

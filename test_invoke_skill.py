@@ -2,7 +2,7 @@ import asyncio
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 
 async def run_cpu_info():
-    async with OmniOSAgentHarness(agent_id="PhoneAgent", host="100.77.91.63") as harness:
+    async with OmniOSAgentHarness(agent_id="PhoneAgent") as harness:
         print("🚀 Requesting PC to execute: sys_cpu_info.py")
         
         # We send the request via the publish_skill tool which routes to skills_router.publish()

@@ -25,13 +25,18 @@ class OmniOSAgentHarness:
     LLM-native capability discovery (JSON Schemas), and asynchronous event subscriptions.
     """
     
-    def __init__(self, agent_id: str, workspace_root: Optional[str] = None, host: str = "127.0.0.1", rpc_port: int = 5565, pub_port: int = 5566):
+    def __init__(self, agent_id: str, workspace_root: Optional[str] = None, host: Optional[str] = None, rpc_port: Optional[int] = None, pub_port: Optional[int] = None):
         self.agent_id = agent_id
         self.workspace_root = workspace_root or os.getcwd()
         self.workflow_file = os.path.join(self.workspace_root, "workflow.json")
-        self.host = host
-        self.rpc_port = rpc_port
-        self.pub_port = pub_port
+        
+        # Dynamic Mesh Configuration fallback from mesh_config.json or environment
+        from omniswarm_py.mesh_config import load_mesh_config
+        cfg = load_mesh_config(self.workspace_root)
+        
+        self.host = host if host is not None else cfg.get("hub_host", "127.0.0.1")
+        self.rpc_port = rpc_port if rpc_port is not None else cfg.get("rpc_port", 5565)
+        self.pub_port = pub_port if pub_port is not None else cfg.get("pub_port", 5566)
         
         # Optimized ZMQ Context Pooling
         self.ctx = zmq.asyncio.Context.instance()

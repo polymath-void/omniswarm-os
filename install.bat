@@ -1,4 +1,6 @@
 @echo off
-echo Installing OmniOS...
-pip install -e .
-echo OmniOS Installation Complete. Boot the daemon via 'python omniswarm_py\omniswarm_daemon.py'
+setlocal
+cd /d "%~dp0"
+echo Launching OmniSwarm-OS Windows Turnkey Installer...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1" %*
+endlocal
