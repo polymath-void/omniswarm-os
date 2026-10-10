@@ -2,7 +2,7 @@ import asyncio
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 
 async def run_and_listen():
-    async with OmniOSAgentHarness(agent_id="PhoneAgent", host="192.168.0.112") as harness:
+    async with OmniOSAgentHarness(agent_id="PhoneAgent", host="192.168.0.111") as harness:
         print("🎧 Subscribing to PC event mesh to catch the output...")
         
         # Start listening in the background

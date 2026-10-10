@@ -45,7 +45,7 @@ class OmniOSAgentHarness:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
 
-    async def connect(self, host: Optional[str] = None, rpc_port: int = 5565, pub_port: int = 5567):
+    async def connect(self, host: Optional[str] = None, rpc_port: int = 5565, pub_port: int = 5566):
         """Establishes optimized, non-blocking connections to the OmniOS Kernel."""
         target_host = host or self.host
         if not self._connected:
