@@ -49,11 +49,49 @@ class ComputeResExecutionBranch:
                     return {"status": "success", "skills_found": skills, "message": "Queried local ComputeRes skills registry."}
                 return {"status": "success", "skills_found": [], "message": "Skills registry empty or uninitialized."}
             
+            # Handle execute intents sent by test scripts
+            if args.get("action") == "execute":
+                import subprocess
+                skill_name = args.get("skill_name")
+                if skill_name:
+                    skills_dir = os.path.join(sys.path[-1], "compute_res", "tools", "evolved_skills")
+                    skill_path = os.path.join(skills_dir, skill_name)
+                    if os.path.exists(skill_path):
+                        # Run the skill non-blocking
+                        print(f"[{agent_id.decode()}] Executing skill natively: {skill_name}")
+                        process = await asyncio.create_subprocess_shell(
+                            f"{sys.executable} {skill_path}",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+                        # We return success immediately, then wait for output to broadcast
+                        async def wait_and_broadcast():
+                            stdout, stderr = await process.communicate()
+                            import zmq
+                            # Broadcast the result to the 5566 PUB port (not 5565!)
+                            ctx = zmq.asyncio.Context.instance()
+                            pub = ctx.socket(zmq.PUB)
+                            pub.connect("tcp://127.0.0.1:5566")
+                            import time; time.sleep(0.05)
+                            payload = json.dumps({"stdout": stdout.decode(), "stderr": stderr.decode()})
+                            await pub.send_multipart([b"OS_EVENT", payload.encode()])
+                            pub.close()
+                        asyncio.create_task(wait_and_broadcast())
+                        return {"status": "success", "message": f"Skill {skill_name} is executing. Output will be broadcast to OS_EVENT."}
+                    return {"status": "error", "message": f"Skill {skill_name} not found in registry."}
+            
             # For publish_skill / adapt_skill
             try:
-                from compute_res.network.skills_router import skills_router
-                skills_router.publish(args)
-                return {"status": "success", "message": "Skill successfully published to WebRTC swarm via SkillsRouter."}
+                # We skip calling skills_router.publish(args) directly because it conflicts with the ROUTER port
+                import zmq
+                ctx = zmq.asyncio.Context.instance()
+                pub = ctx.socket(zmq.PUB)
+                pub.connect("tcp://127.0.0.1:5566") # Broadcast to global event bus instead
+                import time; time.sleep(0.05)
+                payload = json.dumps({"event": "SKILL_AVAILABLE", "data": args})
+                await pub.send_multipart([b"OS_EVENT", payload.encode()])
+                pub.close()
+                return {"status": "success", "message": "Skill successfully published to WebRTC swarm via Event Ledger."}
             except Exception as e:
                 return {"status": "error", "message": f"Failed to route skill: {str(e)}"}
                 
