@@ -47,3 +47,6 @@ bore_watchdog.ps1
 .inbox.jsonl
 .latest_notice.json
 tasks_*.json
+
+# Deployed build artifacts (runtime, not source)
+builds/
