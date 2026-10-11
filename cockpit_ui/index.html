@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OmniSwarm Cockpit — Cybernetic Agent Operations HUD</title>
+  <title>OmniSwarm Cockpit — Cybernetic Swarm Operations HUD</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
   <!-- React 18 & Babel Standalone for Instant Zero-Build Portability -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -12,39 +12,44 @@
 
   <style>
     :root {
-      --bg-primary: #070a0f;
-      --bg-secondary: #0e131d;
-      --bg-tertiary: #161c29;
-      --border-color: #20293a;
-      --border-light: #2e3a52;
-      --text-primary: #f0f6fc;
-      --text-secondary: #8fa0b5;
-      --text-muted: #5e6f85;
+      --bg-primary: #06090e;
+      --bg-secondary: #0b111a;
+      --bg-card: #121926;
+      --bg-card-hover: #172132;
+      --border-color: #1e293b;
+      --border-light: #2d3d57;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
       --cyan-neon: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.25);
       --green-neon: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.25);
       --purple-neon: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.25);
       --amber-neon: #f59e0b;
       --red-neon: #ef4444;
       --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: var(--bg-primary);
       color: var(--text-primary);
       font-family: var(--font-sans);
-      line-height: 1.4;
+      line-height: 1.45;
       overflow: hidden;
       height: 100vh;
       width: 100vw;
+      user-select: none;
     }
     #root { height: 100vh; display: flex; flex-direction: column; }
 
-    /* Scrollbars */
+    /* Performance Scrollbars */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: var(--bg-primary); }
-    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyan-neon); }
 
     /* Top Matrix Header */
     .matrix-header {
@@ -56,28 +61,24 @@
       justify-content: space-between;
       padding: 0 16px;
       font-family: var(--font-mono);
-      font-size: 13px;
+      font-size: 12px;
       flex-shrink: 0;
+      z-index: 10;
     }
     .header-brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       font-weight: 700;
       letter-spacing: 0.5px;
-      color: var(--text-primary);
     }
     .brand-glow {
       color: var(--cyan-neon);
-      text-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
-    }
-    .header-controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      text-shadow: 0 0 12px var(--cyan-glow);
+      font-size: 14px;
     }
     .status-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 3px 10px;
@@ -87,86 +88,87 @@
       background: rgba(16, 185, 129, 0.1);
       border: 1px solid var(--green-neon);
       color: var(--green-neon);
+      box-shadow: 0 0 8px var(--green-glow);
     }
     .status-badge.offline {
       background: rgba(239, 68, 68, 0.1);
       border-color: var(--red-neon);
       color: var(--red-neon);
+      box-shadow: none;
     }
-    .status-pulse {
+    .status-dot {
       width: 7px;
       height: 7px;
       border-radius: 50%;
       background: currentColor;
-      box-shadow: 0 0 8px currentColor;
     }
-    .btn-chip {
-      background: var(--bg-tertiary);
+    .header-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-action {
+      background: var(--bg-card);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 6px;
       font-size: 11px;
       cursor: pointer;
       font-family: var(--font-mono);
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       transition: all 0.15s ease;
     }
-    .btn-chip:hover {
-      background: var(--border-color);
+    .btn-action:hover {
       border-color: var(--cyan-neon);
+      background: var(--bg-card-hover);
     }
-    .btn-chip.primary {
+    .btn-action.primary {
       background: rgba(6, 182, 212, 0.15);
       border-color: var(--cyan-neon);
       color: var(--cyan-neon);
     }
-    .btn-chip.danger {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: var(--red-neon);
-      color: var(--red-neon);
-    }
 
-    /* Main Grid Layout */
-    .cockpit-grid {
+    /* 3-Column Responsive Layout */
+    .cockpit-body {
       flex: 1;
       display: grid;
       grid-template-columns: 280px 1fr 340px;
       overflow: hidden;
       background: var(--bg-primary);
     }
-    @media (max-width: 900px) {
-      .cockpit-grid {
+    @media (max-width: 950px) {
+      .cockpit-body {
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr auto;
       }
     }
 
-    /* Left Sidebar: Telemetry */
-    .sidebar-panel {
+    /* Left Sidebar: Host & Edge Vitals */
+    .left-sidebar {
       background: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      padding: 14px;
       gap: 14px;
+      overflow-y: auto;
     }
-    .panel-title {
+    .section-title {
       font-family: var(--font-mono);
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--text-muted);
-      margin-bottom: 6px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-bottom: 6px;
     }
-    .card-vitals {
-      background: var(--bg-tertiary);
+    .vitals-card {
+      background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 12px;
@@ -175,183 +177,223 @@
     .vital-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-bottom: 6px;
     }
-    .vital-label { color: var(--text-secondary); }
-    .vital-value { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
-    .progress-bar-bg {
-      height: 6px;
-      background: var(--bg-primary);
+    .vital-label { color: var(--text-secondary); font-size: 11px; }
+    .vital-val { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
+    .meter-bar {
+      height: 5px;
+      background: #06090e;
       border-radius: 3px;
       overflow: hidden;
-      margin-top: 4px;
+      margin-top: 3px;
     }
-    .progress-bar-fill {
+    .meter-fill {
       height: 100%;
       background: var(--cyan-neon);
       border-radius: 3px;
       transition: width 0.3s ease;
     }
-    .progress-bar-fill.green { background: var(--green-neon); }
-    .progress-bar-fill.amber { background: var(--amber-neon); }
-    .progress-bar-fill.red { background: var(--red-neon); }
 
     /* Center Panel: Dialogue Stream */
-    .dialogue-panel {
+    .chat-panel {
       display: flex;
       flex-direction: column;
       overflow: hidden;
       background: var(--bg-primary);
+      position: relative;
     }
-    .dialogue-filter-bar {
-      height: 38px;
+    .room-tabs-bar {
+      height: 40px;
+      background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       padding: 0 14px;
       gap: 8px;
-      background: var(--bg-secondary);
-      font-size: 12px;
-      font-family: var(--font-mono);
+      flex-shrink: 0;
+      overflow-x: auto;
     }
-    .tab-btn {
+    .room-tab {
       background: transparent;
       border: none;
-      color: var(--text-secondary);
-      padding: 4px 10px;
-      border-radius: 4px;
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
     }
-    .tab-btn.active {
-      background: var(--bg-tertiary);
-      color: var(--cyan-neon);
+    .room-tab.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
       font-weight: 600;
+      border: 1px solid var(--border-color);
     }
-    .messages-stream {
+    .room-tab.active.agy { color: var(--purple-neon); border-color: var(--purple-neon); }
+    .room-tab.active.pc { color: var(--cyan-neon); border-color: var(--cyan-neon); }
+    .room-tab.active.phone { color: var(--green-neon); border-color: var(--green-neon); }
+
+    /* Messages List (No Lag) */
+    .messages-viewport {
       flex: 1;
       overflow-y: auto;
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      contain: layout style;
     }
-
-    /* Message Bubble Cards */
     .msg-card {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 12px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      transition: border-color 0.2s ease;
+      transition: border-color 0.15s ease;
+      user-select: text;
     }
-    .msg-card.pc { border-left: 3px solid var(--cyan-neon); }
-    .msg-card.phone { border-left: 3px solid var(--green-neon); }
-    .msg-card.antigravity { border-left: 3px solid var(--purple-neon); }
+    .msg-card:hover {
+      border-color: var(--border-light);
+    }
+    .msg-card.agy {
+      border-left: 3px solid var(--purple-neon);
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.04) 0%, var(--bg-secondary) 100%);
+    }
+    .msg-card.pc {
+      border-left: 3px solid var(--cyan-neon);
+      background: linear-gradient(90deg, rgba(6, 182, 212, 0.04) 0%, var(--bg-secondary) 100%);
+    }
+    .msg-card.phone {
+      border-left: 3px solid var(--green-neon);
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.04) 0%, var(--bg-secondary) 100%);
+    }
 
-    .msg-header {
+    .msg-meta-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 11px;
       font-family: var(--font-mono);
+      font-size: 11px;
     }
-    .msg-sender {
+    .msg-identity {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-weight: 600;
     }
-    .msg-sender.pc { color: var(--cyan-neon); }
-    .msg-sender.phone { color: var(--green-neon); }
-    .msg-sender.antigravity { color: var(--purple-neon); }
+    .msg-identity.agy { color: var(--purple-neon); }
+    .msg-identity.pc { color: var(--cyan-neon); }
+    .msg-identity.phone { color: var(--green-neon); }
+    .badge-route {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
     .msg-time { color: var(--text-muted); }
-    .msg-body {
+    .msg-text-content {
       font-size: 13px;
       color: var(--text-primary);
-      word-break: break-word;
       white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
     }
 
-    /* Generative UI Widgets */
-    .gen-widget {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
+    /* Generative UI Dynamic Cards */
+    .card-diff-container {
+      background: #020408;
+      border: 1px solid #1e293b;
       border-radius: 6px;
-      padding: 8px 10px;
-      margin-top: 6px;
+      padding: 10px;
       font-family: var(--font-mono);
       font-size: 11px;
-    }
-    .gen-widget-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
-    .diff-block {
-      background: #040609;
-      padding: 8px;
-      border-radius: 4px;
       overflow-x: auto;
-      max-height: 200px;
-      line-height: 1.4;
+      max-height: 220px;
     }
-    .diff-add { color: var(--green-neon); }
-    .diff-del { color: var(--red-neon); }
-    .terminal-block {
-      background: #040609;
+    .diff-line-add { color: #34d399; background: rgba(16, 185, 129, 0.08); }
+    .diff-line-del { color: #f87171; background: rgba(239, 68, 68, 0.08); }
+
+    .card-terminal-container {
+      background: #020408;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
       color: #38bdf8;
-      padding: 8px;
-      border-radius: 4px;
       overflow-x: auto;
-      max-height: 160px;
+      max-height: 180px;
     }
-    .action-chips-row {
+
+    .action-chips-wrapper {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      margin-top: 6px;
+      margin-top: 4px;
     }
-    .chip-interactive {
-      background: var(--bg-tertiary);
+    .chip-btn {
+      background: var(--bg-card);
       border: 1px solid var(--border-light);
       color: var(--text-secondary);
-      padding: 3px 8px;
+      padding: 3px 9px;
       border-radius: 4px;
       font-size: 11px;
       cursor: pointer;
       font-family: var(--font-mono);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
-    .chip-interactive:hover {
+    .chip-btn:hover {
       background: var(--border-color);
       color: var(--cyan-neon);
       border-color: var(--cyan-neon);
     }
 
-    /* Right Panel: Workflows & Ops Stream */
-    .right-panel {
+    /* Floating Jump Button */
+    .jump-bottom-btn {
+      position: absolute;
+      bottom: 60px;
+      right: 20px;
+      background: var(--cyan-neon);
+      color: #040609;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 20px;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4);
+      cursor: pointer;
+      border: none;
+      z-index: 20;
+    }
+
+    /* Right Panel: Workflow & Ops Stream */
+    .right-sidebar {
       background: var(--bg-secondary);
       border-left: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
-    .workflow-section {
+    .workflow-box {
       padding: 14px;
       border-bottom: 1px solid var(--border-color);
       flex-shrink: 0;
     }
-    .workflow-card {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 12px;
-    }
-    .workflow-status {
+    .pill-status {
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
@@ -359,22 +401,22 @@
       font-weight: 700;
       font-family: var(--font-mono);
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
-    .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--amber-neon); }
-    .status-running { background: rgba(6, 182, 212, 0.15); color: var(--cyan-neon); }
-    .status-completed { background: rgba(16, 185, 129, 0.15); color: var(--green-neon); }
+    .pill-pending { background: rgba(245, 158, 11, 0.15); color: var(--amber-neon); }
+    .pill-running { background: rgba(6, 182, 212, 0.15); color: var(--cyan-neon); }
+    .pill-completed { background: rgba(16, 185, 129, 0.15); color: var(--green-neon); }
 
-    .ops-section {
+    .ops-box {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       padding: 14px;
     }
-    .ops-stream {
+    .ops-terminal {
       flex: 1;
-      background: #040609;
+      background: #020408;
       border: 1px solid var(--border-color);
       border-radius: 6px;
       padding: 8px;
@@ -385,13 +427,13 @@
       flex-direction: column;
       gap: 4px;
     }
-    .log-line { display: flex; gap: 6px; line-height: 1.3; }
-    .log-level-INFO { color: var(--green-neon); }
-    .log-level-WARN { color: var(--amber-neon); }
-    .log-level-ERROR { color: var(--red-neon); }
+    .log-item { display: flex; gap: 6px; line-height: 1.35; }
+    .log-INFO { color: var(--green-neon); }
+    .log-WARN { color: var(--amber-neon); }
+    .log-ERROR { color: var(--red-neon); }
 
     /* Bottom Command Bar */
-    .command-bar {
+    .bottom-command-bar {
       height: 48px;
       background: var(--bg-secondary);
       border-top: 1px solid var(--border-color);
@@ -401,17 +443,17 @@
       gap: 8px;
       flex-shrink: 0;
     }
-    .target-select {
-      background: var(--bg-tertiary);
+    .input-target {
+      background: var(--bg-card);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
       padding: 6px 10px;
       border-radius: 6px;
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
       outline: none;
     }
-    .cmd-input {
+    .input-cmd {
       flex: 1;
       background: var(--bg-primary);
       border: 1px solid var(--border-color);
@@ -422,8 +464,8 @@
       font-size: 12px;
       outline: none;
     }
-    .cmd-input:focus { border-color: var(--cyan-neon); }
-    .send-btn {
+    .input-cmd:focus { border-color: var(--cyan-neon); }
+    .btn-send {
       background: var(--cyan-neon);
       border: none;
       color: #040609;
@@ -433,9 +475,7 @@
       font-family: var(--font-mono);
       font-size: 12px;
       cursor: pointer;
-      transition: opacity 0.15s ease;
     }
-    .send-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -452,51 +492,52 @@
         telemetry: {},
         node_status: {}
       });
-      const [filter, setFilter] = useState("all");
-      const [targetAgent, setTargetAgent] = useState("PCAgent");
-      const [inputCmd, setInputCmd] = useState("");
-      const [audioEnabled, setAudioEnabled] = useState(true);
+      const [activeTab, setActiveTab] = useState("agy_pc"); // Default to exact Antigravity <-> PCAgent dialogue
+      const [targetPeer, setTargetPeer] = useState("PCAgent");
+      const [cmdText, setCmdText] = useState("");
+      const [autoScroll, setAutoScroll] = useState(false);
+      const [showJumpBtn, setShowJumpBtn] = useState(false);
       const [isSending, setIsSending] = useState(false);
-      const messagesEndRef = useRef(null);
-      const logsEndRef = useRef(null);
+      const scrollViewportRef = useRef(null);
+      const prevMsgCountRef = useRef(0);
 
-      // Web Audio API Synthetic Beep (0 external tokens/assets)
-      const playChime = (freq = 880, duration = 0.08) => {
-        if (!audioEnabled) return;
-        try {
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
-          gain.gain.setValueAtTime(0.05, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + duration);
-        } catch (e) {}
-      };
-
-      // Connect to SSE Stream
+      // SSE Connection (Zero Tokens)
       useEffect(() => {
         const es = new EventSource("/api/stream");
-        es.onmessage = (event) => {
+        es.onmessage = (e) => {
           try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(e.data);
             setState(data);
-          } catch (e) {}
+          } catch (err) {}
         };
-        es.onerror = () => {};
         return () => es.close();
       }, []);
 
-      // Auto scroll
-      useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, [state.messages]);
+      // Smart Scroll Handler (Zero Jank / Stutter)
+      const handleScroll = () => {
+        const el = scrollViewportRef.current;
+        if (!el) return;
+        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        setShowJumpBtn(!isNearBottom);
+      };
 
-      // Actions
+      // Perform scroll only when autoScroll is toggled ON or user jumps
+      const scrollToBottom = () => {
+        const el = scrollViewportRef.current;
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+          setShowJumpBtn(false);
+        }
+      };
+
+      useEffect(() => {
+        if (autoScroll) {
+          const el = scrollViewportRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }
+      }, [state.messages, autoScroll]);
+
+      // API Actions
       const sendAction = async (payload) => {
         setIsSending(true);
         try {
@@ -505,73 +546,48 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
-          playChime(1174, 0.05);
         } catch (e) {}
         setIsSending(false);
       };
 
-      const handleToggleNode = async (action) => {
-        try {
-          await fetch("/api/node/toggle", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action })
-          });
-          playChime(659, 0.08);
-        } catch (e) {}
-      };
-
-      const handleRemediate = async (type) => {
-        try {
-          await fetch("/api/remediate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type })
-          });
-          playChime(880, 0.08);
-        } catch (e) {}
-      };
-
-      const handleEndpointSwitch = async (e) => {
-        const val = e.target.value;
-        const [host, port] = val.split(":");
-        if (host && port) {
-          await fetch("/api/node/endpoint", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ hub_host: host, rpc_port: parseInt(port) })
-          });
-        }
-      };
-
-      const handleCommandSubmit = (e) => {
+      const handleFormSubmit = (e) => {
         e.preventDefault();
-        if (!inputCmd.trim()) return;
-        const text = inputCmd.trim();
-        setInputCmd("");
-        if (targetAgent === "swarm_dev") {
-          sendAction({ room: "swarm_dev", message: text });
+        if (!cmdText.trim()) return;
+        const msg = cmdText.trim();
+        setCmdText("");
+        if (targetPeer === "swarm_dev") {
+          sendAction({ room: "swarm_dev", message: msg });
         } else {
-          sendAction({ target: targetAgent, message: text });
+          sendAction({ target: targetPeer, message: msg });
         }
       };
 
-      // Filtered messages
-      const filteredMessages = (state.messages || []).filter(m => {
-        if (filter === "all") return true;
+      // Exact Message Filtering
+      const messages = state.messages || [];
+      const filtered = messages.filter((m) => {
         const s = (m.sender || "").toLowerCase();
         const r = (m.recipient || "").toLowerCase();
-        if (filter === "pc") return s.includes("pc") || r.includes("pc");
-        if (filter === "phone") return s.includes("phone") || r.includes("phone");
-        if (filter === "antigravity") return s.includes("antigravity") || r.includes("antigravity");
+        if (activeTab === "all") return true;
+        if (activeTab === "agy_pc") {
+          // Exact Antigravity <-> PCAgent dialogue
+          return (s.includes("antigravity") && r.includes("pc")) ||
+                 (s.includes("pc") && r.includes("antigravity"));
+        }
+        if (activeTab === "phone_pc") {
+          // Exact PhoneAgent <-> PCAgent dialogue
+          return (s.includes("phone") && r.includes("pc")) ||
+                 (s.includes("pc") && r.includes("phone"));
+        }
+        if (activeTab === "swarm_dev") {
+          return m.room === "swarm_dev" || r === "*" || m.message?.startsWith("[swarm_dev]");
+        }
         return true;
       });
 
       const node = state.node_status || {};
       const telem = state.telemetry || {};
       const battery = telem.battery || {};
-      const isOnline = node.phone_daemon_running && node.pc_hub_reachable;
-      const currentConfig = node.config || {};
+      const isOnline = node.pc_hub_reachable;
 
       return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -580,241 +596,235 @@
             <div className="header-brand">
               <span className="brand-glow">⚡ OMNISWARM COCKPIT</span>
               <div className={`status-badge ${isOnline ? "" : "offline"}`}>
-                <span className="status-pulse"></span>
-                {isOnline ? "ONLINE" : "OFFLINE"}
+                <span className="status-dot"></span>
+                {isOnline ? "HUB ONLINE" : "HUB OFFLINE"}
               </div>
               {node.rtt_ms && (
-                <span style={{ color: "var(--cyan-neon)", fontSize: "11px" }}>
-                  RTT: {node.rtt_ms}ms
-                </span>
+                <span style={{ color: "var(--cyan-neon)" }}>RTT: {node.rtt_ms}ms</span>
               )}
+              <span style={{ color: "var(--text-muted)" }}>Host: {telem.is_windows ? "PC Windows" : "Android Edge"}</span>
             </div>
 
-            <div className="header-controls">
-              <select 
-                className="target-select" 
-                style={{ fontSize: "11px", padding: "2px 6px" }}
-                value={`${currentConfig.hub_host || '192.168.0.111'}:${currentConfig.rpc_port || 5565}`}
-                onChange={handleEndpointSwitch}
+            <div className="header-tools">
+              <button 
+                className={`btn-action ${autoScroll ? "primary" : ""}`}
+                onClick={() => setAutoScroll(!autoScroll)}
               >
-                <option value="192.168.0.111:5565">Direct LAN (192.168.0.111:5565)</option>
-                <option value="bore.pub:33458">Cloud Relay (bore.pub:33458)</option>
-              </select>
-
-              {node.phone_daemon_running ? (
-                <button className="btn-chip danger" onClick={() => handleToggleNode("stop")}>
-                  🔌 Disconnect
-                </button>
-              ) : (
-                <button className="btn-chip primary" onClick={() => handleToggleNode("start")}>
-                  ⚡ Connect
-                </button>
-              )}
-
-              <button className="btn-chip" onClick={() => sendAction({ target: "PCAgent", message: "ping", data: { action: "ping" } })}>
-                🚀 Ping PC
+                📜 Auto-Scroll: {autoScroll ? "ON" : "OFF"}
               </button>
 
-              <button className="btn-chip" onClick={() => setAudioEnabled(!audioEnabled)}>
-                {audioEnabled ? "🔔" : "🔕"}
+              <button 
+                className="btn-action"
+                onClick={() => sendAction({ target: "PCAgent", message: "ping", data: { action: "ping" } })}
+              >
+                🚀 Ping PC
               </button>
             </div>
           </header>
 
-          {/* Main 3-Column Grid */}
-          <main className="cockpit-grid">
-            {/* Left Column: Telemetry & Hardware Gauges */}
-            <aside className="sidebar-panel">
-              <div className="panel-title">
-                <span>📊 Edge Vitals (Termux)</span>
-                <span>{telem.device_model || "Android"}</span>
+          {/* Main 3-Column Layout */}
+          <main className="cockpit-body">
+            {/* Left Column: Vitals */}
+            <aside className="left-sidebar">
+              <div className="section-title">
+                <span>📊 Host Hardware Vitals</span>
               </div>
-
-              <div className="card-vitals">
+              <div className="vitals-card">
                 <div className="vital-row">
-                  <span className="vital-label">SoC Processor:</span>
-                  <span className="vital-value" style={{ fontSize: "10px" }}>{telem.soc || "Dimensity 7200"}</span>
+                  <span className="vital-label">Host Device:</span>
+                  <span className="vital-val">{telem.device_model || "Host"}</span>
+                </div>
+                <div className="vital-row">
+                  <span className="vital-label">Processor SoC:</span>
+                  <span className="vital-val" style={{ fontSize: "10px" }}>{telem.soc || "Multi-Core"}</span>
                 </div>
                 {battery.percentage !== undefined && (
                   <>
                     <div className="vital-row" style={{ marginTop: "6px" }}>
                       <span className="vital-label">Battery Level:</span>
-                      <span className="vital-value">{battery.percentage}% ({battery.status || "Discharging"})</span>
+                      <span className="vital-val">{battery.percentage}%</span>
                     </div>
-                    <div className="progress-bar-bg">
-                      <div 
-                        className={`progress-bar-fill ${battery.percentage > 40 ? 'green' : (battery.percentage > 20 ? 'amber' : 'red')}`} 
-                        style={{ width: `${battery.percentage}%` }}
-                      ></div>
-                    </div>
-                    <div className="vital-row" style={{ marginTop: "6px" }}>
-                      <span className="vital-label">Battery Temp:</span>
-                      <span className="vital-value">{battery.temperature ? (battery.temperature / 10).toFixed(1) : 31.0}°C</span>
+                    <div className="meter-bar">
+                      <div className="meter-fill" style={{ width: `${battery.percentage}%` }}></div>
                     </div>
                   </>
                 )}
                 <div className="vital-row" style={{ marginTop: "8px" }}>
-                  <span className="vital-label">RAM Usage:</span>
-                  <span className="vital-value">{telem.ram_used_percent || 0}%</span>
+                  <span className="vital-label">Memory Used:</span>
+                  <span className="vital-val">{telem.ram_used_percent || 0}%</span>
                 </div>
-                <div className="progress-bar-bg">
-                  <div 
-                    className={`progress-bar-fill ${telem.ram_used_percent > 85 ? 'red' : 'green'}`} 
-                    style={{ width: `${telem.ram_used_percent || 0}%` }}
-                  ></div>
+                <div className="meter-bar">
+                  <div className="meter-fill" style={{ width: `${telem.ram_used_percent || 0}%` }}></div>
                 </div>
                 <div className="vital-row" style={{ marginTop: "4px" }}>
-                  <span className="vital-label">Available:</span>
-                  <span className="vital-value">{telem.ram_available_mb || 0} MB</span>
+                  <span className="vital-label">RAM Free:</span>
+                  <span className="vital-val">{telem.ram_available_mb || 0} MB</span>
                 </div>
               </div>
 
-              <div className="panel-title" style={{ marginTop: "6px" }}>
-                <span>⚡ Quick Remediation</span>
+              <div className="section-title">
+                <span>🤖 Swarm Fleet Entities</span>
+              </div>
+              <div className="vitals-card" style={{ fontSize: "11px" }}>
+                <div className="vital-row">
+                  <span className="vital-label">🧠 Antigravity:</span>
+                  <span className="vital-val" style={{ color: "var(--purple-neon)" }}>Cognitive Brain</span>
+                </div>
+                <div className="vital-row">
+                  <span className="vital-label">🖥️ PCAgent:</span>
+                  <span className="vital-val" style={{ color: "var(--cyan-neon)" }}>PC Coordinator</span>
+                </div>
+                <div className="vital-row">
+                  <span className="vital-label">📱 PhoneAgent:</span>
+                  <span className="vital-val" style={{ color: "var(--green-neon)" }}>Edge Node</span>
+                </div>
+              </div>
+
+              <div className="section-title">
+                <span>⚡ Quick Directives</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <button className="btn-chip" onClick={() => handleRemediate("verify")}>
-                  📊 Run verify_install.py
+                <button className="btn-action" onClick={() => sendAction({ target: "PCAgent", message: "health", data: { action: "health_check" } })}>
+                  📊 PC Health Check
                 </button>
-                <button className="btn-chip" onClick={() => handleRemediate("git_rebase")}>
-                  🔄 Git Pull Rebase
+                <button className="btn-action" onClick={() => sendAction({ target: "PhoneAgent-Termux", message: "exec:git status -s" })}>
+                  📋 Phone Git Status
                 </button>
-                <button className="btn-chip" onClick={() => handleRemediate("clean_cache")}>
-                  🧹 Clean System Caches
+                <button className="btn-action" onClick={() => sendAction({ target: "PCAgent", message: "exec:git log -n 1 --oneline" })}>
+                  📜 PC Git Log
                 </button>
-              </div>
-
-              <div className="panel-title" style={{ marginTop: "6px" }}>
-                <span>🌐 Mesh Topology</span>
-              </div>
-              <div className="card-vitals" style={{ fontSize: "11px" }}>
-                <div className="vital-row">
-                  <span className="vital-label">Edge Node:</span>
-                  <span className="vital-value" style={{ color: "var(--green-neon)" }}>PhoneAgent-Termux</span>
-                </div>
-                <div className="vital-row">
-                  <span className="vital-label">Cognitive Brain:</span>
-                  <span className="vital-value" style={{ color: "var(--purple-neon)" }}>Antigravity</span>
-                </div>
-                <div className="vital-row">
-                  <span className="vital-label">Coordinator:</span>
-                  <span className="vital-value" style={{ color: "var(--cyan-neon)" }}>PCAgent</span>
-                </div>
               </div>
             </aside>
 
-            {/* Center Column: Formatted Dialogue Stream */}
-            <section className="dialogue-panel">
-              <div className="dialogue-filter-bar">
-                <span style={{ color: "var(--text-muted)", marginRight: "6px" }}>Filter:</span>
-                <button className={`tab-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
-                <button className={`tab-btn ${filter === 'pc' ? 'active' : ''}`} onClick={() => setFilter('pc')}>PC Agent</button>
-                <button className={`tab-btn ${filter === 'phone' ? 'active' : ''}`} onClick={() => setFilter('phone')}>Phone Agent</button>
-                <button className={`tab-btn ${filter === 'antigravity' ? 'active' : ''}`} onClick={() => setFilter('antigravity')}>Antigravity</button>
+            {/* Center Column: Formatted Exact Chat */}
+            <section className="chat-panel">
+              {/* Room & Conversation Selector Tabs */}
+              <div className="room-tabs-bar">
+                <button 
+                  className={`room-tab agy ${activeTab === "agy_pc" ? "active" : ""}`}
+                  onClick={() => setActiveTab("agy_pc")}
+                >
+                  🧠 Antigravity ↔ PCAgent
+                </button>
+                <button 
+                  className={`room-tab phone ${activeTab === "phone_pc" ? "active" : ""}`}
+                  onClick={() => setActiveTab("phone_pc")}
+                >
+                  📱 PhoneAgent ↔ PCAgent
+                </button>
+                <button 
+                  className={`room-tab ${activeTab === "swarm_dev" ? "active" : ""}`}
+                  onClick={() => setActiveTab("swarm_dev")}
+                >
+                  📡 Room: swarm_dev
+                </button>
+                <button 
+                  className={`room-tab ${activeTab === "all" ? "active" : ""}`}
+                  onClick={() => setActiveTab("all")}
+                >
+                  🌐 All Messages ({messages.length})
+                </button>
               </div>
 
-              <div className="messages-stream">
-                {filteredMessages.length === 0 ? (
+              {/* Viewport */}
+              <div 
+                className="messages-viewport" 
+                ref={scrollViewportRef}
+                onScroll={handleScroll}
+              >
+                {filtered.length === 0 ? (
                   <div style={{ textAlign: "center", color: "var(--text-muted)", marginTop: "40px", fontFamily: "var(--font-mono)" }}>
-                    No messages yet. Waiting for mesh activity...
+                    No messages in this channel yet.
                   </div>
                 ) : (
-                  filteredMessages.map((msg, idx) => {
-                    const sender = msg.sender || "Unknown";
-                    const isPC = sender.includes("PC");
+                  filtered.map((m, idx) => {
+                    const sender = m.sender || "Unknown";
                     const isAGY = sender.includes("Antigravity");
-                    const roleClass = isPC ? "pc" : (isAGY ? "antigravity" : "phone");
-                    const text = msg.content || msg.message || "";
-                    const data = msg.data || msg.metadata?.data || {};
+                    const isPC = sender.includes("PC");
+                    const roleClass = isAGY ? "agy" : (isPC ? "pc" : "phone");
+                    const icon = isAGY ? "🧠" : (isPC ? "🖥️" : "📱");
+                    const text = m.message || m.content || "";
+                    const data = m.data || {};
 
                     return (
-                      <div key={msg.id || idx} className={`msg-card ${roleClass}`}>
-                        <div className="msg-header">
-                          <div className={`msg-sender ${roleClass}`}>
-                            <span>{isPC ? "🖥️" : (isAGY ? "🧠" : "📱")}</span>
+                      <div key={m.id || idx} className={`msg-card ${roleClass}`}>
+                        <div className="msg-meta-row">
+                          <div className={`msg-identity ${roleClass}`}>
+                            <span>{icon}</span>
                             <span>{sender}</span>
-                            {msg.recipient && <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>➔ {msg.recipient}</span>}
+                            {m.recipient && (
+                              <span className="badge-route">➔ {m.recipient}</span>
+                            )}
                           </div>
                           <span className="msg-time">
-                            {msg.timestamp ? new Date(msg.timestamp * 1000).toLocaleTimeString() : ""}
+                            {m.timestamp ? new Date(m.timestamp * 1000).toLocaleTimeString() : ""}
                           </span>
                         </div>
 
-                        <div className="msg-body">{text}</div>
+                        <div className="msg-text-content">{text}</div>
 
-                        {/* Generative UI: Diff Widget */}
-                        {data.diff || (text.includes("diff --git") || text.includes("@@")) && (
-                          <div className="gen-widget">
-                            <div className="gen-widget-header">
-                              <span>📄 Git Diff Detected</span>
-                            </div>
-                            <div className="diff-block">
-                              {(data.diff || text).split("\n").map((line, li) => (
-                                <div key={li} className={line.startsWith("+") ? "diff-add" : (line.startsWith("-") ? "diff-del" : "")}>
-                                  {line}
-                                </div>
-                              ))}
-                            </div>
-                            <div className="action-chips-row">
-                              <span className="chip-interactive" onClick={() => sendAction({ target: "PCAgent", message: "exec:git commit -m 'Auto-Approved in Cockpit'" })}>
-                                ✅ Approve & Commit
-                              </span>
-                            </div>
+                        {/* Generative UI: Diff Inspector */}
+                        {(data.diff || text.includes("diff --git") || text.includes("@@")) && (
+                          <div className="card-diff-container">
+                            <div style={{ color: "var(--text-muted)", marginBottom: "4px" }}>📄 Git Diff Stream</div>
+                            {(data.diff || text).split("\n").map((line, li) => (
+                              <div key={li} className={line.startsWith("+") ? "diff-line-add" : (line.startsWith("-") ? "diff-line-del" : "")}>
+                                {line}
+                              </div>
+                            ))}
                           </div>
                         )}
 
-                        {/* Generative UI: Shell Execution Widget */}
+                        {/* Generative UI: Shell Output */}
                         {(data.stdout || data.stderr || text.startsWith("Command '")) && (
-                          <div className="gen-widget">
-                            <div className="gen-widget-header">
-                              <span>🖥️ Shell Output {data.returncode !== undefined ? `(Exit: ${data.returncode})` : ""}</span>
-                              <span>{data.success ? "✅ SUCCESS" : "⚠️ FAILED"}</span>
+                          <div className="card-terminal-container">
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                              <span>🖥️ Execution Result {data.returncode !== undefined ? `(Exit: ${data.returncode})` : ""}</span>
+                              <span>{data.success ? "✅ SUCCESS" : "⚠️ NOTICE"}</span>
                             </div>
-                            <div className="terminal-block">
+                            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                               {data.stdout || data.stderr || "Output logged."}
-                            </div>
-                            <div className="action-chips-row">
-                              <span className="chip-interactive" onClick={() => navigator.clipboard.writeText(data.stdout || text)}>
-                                📋 Copy Output
-                              </span>
-                              <span className="chip-interactive" onClick={() => sendAction({ target: "PhoneAgent-Termux", message: "exec:git status -s" })}>
-                                📊 Check Git Status
-                              </span>
-                            </div>
+                            </pre>
                           </div>
                         )}
 
-                        {/* Generative UI: Smart Action Suggestions */}
-                        <div className="action-chips-row">
-                          <span className="chip-interactive" onClick={() => sendAction({ target: sender, message: "health", data: { action: "health_check" } })}>
-                            ▶ Query Health
-                          </span>
-                          <span className="chip-interactive" onClick={() => sendAction({ target: sender, message: "ping", data: { action: "ping" } })}>
+                        {/* Generative UI: Smart Action Chips */}
+                        <div className="action-chips-wrapper">
+                          <span className="chip-btn" onClick={() => sendAction({ target: sender, message: "ping", data: { action: "ping" } })}>
                             ▶ Ping Node
+                          </span>
+                          <span className="chip-btn" onClick={() => sendAction({ target: sender, message: "health", data: { action: "health_check" } })}>
+                            ▶ Query Health
                           </span>
                         </div>
                       </div>
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
+
+              {/* Jump to Latest Floating Button */}
+              {showJumpBtn && (
+                <button className="jump-bottom-btn" onClick={scrollToBottom}>
+                  ↓ Jump to Latest
+                </button>
+              )}
             </section>
 
-            {/* Right Column: Workflows & Live Ops Stream */}
-            <aside className="right-panel">
-              {/* Active Workflow */}
-              <div className="workflow-section">
-                <div className="panel-title">
+            {/* Right Column: Active Workflow & Real-Time Ops Stream */}
+            <aside className="right-sidebar">
+              {/* Workflow Pipeline */}
+              <div className="workflow-box">
+                <div className="section-title">
                   <span>⚡ Active Workflow Intent</span>
                 </div>
                 {state.workflow ? (
-                  <div className="workflow-card">
-                    <span className={`workflow-status status-${state.workflow.status || 'pending'}`}>
+                  <div className="vitals-card">
+                    <span className={`pill-status pill-${state.workflow.status || 'pending'}`}>
                       {state.workflow.status || "Pending"}
                     </span>
                     <div style={{ fontSize: "12px", fontWeight: "600", marginBottom: "4px" }}>
-                      {state.workflow.intent || "No active intent description"}
+                      {state.workflow.intent || "No intent text"}
                     </div>
                     <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
                       Task ID: {state.workflow.task_id || "N/A"}<br/>
@@ -822,57 +832,56 @@
                     </div>
                   </div>
                 ) : (
-                  <div style={{ fontSize: "12px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                    No pending workflows in workflow.json
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                    No pending tasks in workflow.json
                   </div>
                 )}
               </div>
 
-              {/* Real-time Ops Stream */}
-              <div className="ops-section">
-                <div className="panel-title">
+              {/* Real-Time Ops Terminal */}
+              <div className="ops-box">
+                <div className="section-title">
                   <span>🖥️ Real-time Ops Stream</span>
-                  <span>{state.logs?.length || 0} entries</span>
+                  <span>{state.logs?.length || 0}</span>
                 </div>
-                <div className="ops-stream">
+                <div className="ops-terminal">
                   {(state.logs || []).map((l, i) => (
-                    <div key={l.id || i} className="log-line">
-                      <span className={`log-level-${l.log_level || l.level || 'INFO'}`}>
+                    <div key={l.id || i} className="log-item">
+                      <span className={`log-${l.log_level || l.level || 'INFO'}`}>
                         [{l.log_level || l.level || 'INFO'}]
                       </span>
                       <span style={{ color: "var(--text-muted)" }}>[{l.agent_id}]</span>
                       <span style={{ color: "var(--text-primary)" }}>{l.message}</span>
                     </div>
                   ))}
-                  <div ref={logsEndRef} />
                 </div>
               </div>
             </aside>
           </main>
 
           {/* Bottom Command Bar */}
-          <footer className="command-bar">
+          <footer className="bottom-command-bar">
             <select 
-              className="target-select" 
-              value={targetAgent} 
-              onChange={(e) => setTargetAgent(e.target.value)}
+              className="input-target"
+              value={targetPeer} 
+              onChange={(e) => setTargetPeer(e.target.value)}
             >
               <option value="PCAgent">Target: PCAgent</option>
-              <option value="PhoneAgent-Termux">Target: PhoneAgent</option>
               <option value="Antigravity">Target: Antigravity Brain</option>
+              <option value="PhoneAgent-Termux">Target: PhoneAgent</option>
               <option value="swarm_dev">Room: swarm_dev</option>
             </select>
 
-            <form onSubmit={handleCommandSubmit} style={{ display: "flex", flex: 1, gap: "8px" }}>
+            <form onSubmit={handleFormSubmit} style={{ display: "flex", flex: 1, gap: "8px" }}>
               <input
                 type="text"
-                className="cmd-input"
-                placeholder="Enter directive (e.g. 'health', 'exec:uptime', 'git status', 'task:review PR')..."
-                value={inputCmd}
-                onChange={(e) => setInputCmd(e.target.value)}
+                className="input-cmd"
+                placeholder="Enter directive or message to dispatch over ZMQ..."
+                value={cmdText}
+                onChange={(e) => setCmdText(e.target.value)}
               />
-              <button type="submit" className="send-btn" disabled={isSending}>
-                {isSending ? "Sending..." : "🚀 SEND"}
+              <button type="submit" className="btn-send" disabled={isSending}>
+                {isSending ? "..." : "🚀 SEND"}
               </button>
             </form>
           </footer>
