@@ -260,13 +260,94 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                     )
                     print(f"    {GREEN}✅ Git Sync reported to {sender}{RESET}")
 
-                elif action == "ping":
-                    await harness.send_agent_message(
-                        recipient=sender,
-                        message="PONG! PhoneAgent-Termux is fully operational.",
-                        data={"uptime": time.time() - last_heartbeat}
-                    )
-                    print(f"    {GREEN}✅ Pong sent to {sender}{RESET}")
+                elif action in ["deploy_build", "receive_build", "upload_build"]:
+                    filename = data.get("filename") or "build_artifact"
+                    build_dir = os.path.join(SCRIPT_DIR, "builds")
+                    os.makedirs(build_dir, exist_ok=True)
+                    target_path = data.get("target_path") or os.path.join(build_dir, filename)
+                    
+                    content_b64 = data.get("content_b64")
+                    content_text = data.get("content")
+                    
+                    import base64
+                    import hashlib
+                    try:
+                        if content_b64:
+                            binary_bytes = base64.b64decode(content_b64)
+                            with open(target_path, "wb") as bf:
+                                bf.write(binary_bytes)
+                        elif content_text:
+                            with open(target_path, "w", encoding="utf-8") as tf:
+                                tf.write(content_text)
+                        else:
+                            raise ValueError("No content_b64 or content provided")
+
+                        if data.get("executable", True):
+                            try:
+                                os.chmod(target_path, 0o755)
+                            except Exception:
+                                pass
+
+                        sha256 = hashlib.sha256(open(target_path, "rb").read()).hexdigest()
+                        size_bytes = os.path.getsize(target_path)
+                        
+                        report = {
+                            "success": True,
+                            "target_path": target_path,
+                            "filename": filename,
+                            "size_bytes": size_bytes,
+                            "sha256": sha256,
+                            "message": f"Build '{filename}' received and deployed successfully ({size_bytes} bytes)."
+                        }
+                        await harness.post_agent_log(f"Received build: {filename} ({size_bytes} bytes, SHA256: {sha256[:8]})")
+                        await harness.send_agent_message(
+                            recipient=sender,
+                            message=f"Build '{filename}' received and deployed ({size_bytes} bytes, SHA256: {sha256[:8]})",
+                            data=report
+                        )
+                        print(f"    {GREEN}✅ Build '{filename}' saved to {target_path} ({size_bytes} bytes){RESET}")
+                    except Exception as be:
+                        err_report = {"success": False, "error": str(be)}
+                        await harness.post_agent_log(f"Failed to deploy build {filename}: {be}")
+                        await harness.send_agent_message(recipient=sender, message=f"Failed to deploy build: {be}", data=err_report)
+
+                elif action == "fetch_build":
+                    url = data.get("url", "")
+                    filename = data.get("filename") or os.path.basename(url.split("?")[0]) or "build_artifact"
+                    build_dir = os.path.join(SCRIPT_DIR, "builds")
+                    os.makedirs(build_dir, exist_ok=True)
+                    target_path = data.get("target_path") or os.path.join(build_dir, filename)
+                    
+                    print(f"    {YELLOW}▶ Fetching build artifact from {url}...{RESET}")
+                    cmd = f"curl -sSL -o '{target_path}' '{url}'"
+                    res = await execute_local_shell(cmd)
+                    if res.get("success") and os.path.exists(target_path) and os.path.getsize(target_path) > 0:
+                        if data.get("executable", True):
+                            try:
+                                os.chmod(target_path, 0o755)
+                            except Exception:
+                                pass
+                        import hashlib
+                        sha256 = hashlib.sha256(open(target_path, "rb").read()).hexdigest()
+                        size_bytes = os.path.getsize(target_path)
+                        report = {
+                            "success": True,
+                            "target_path": target_path,
+                            "filename": filename,
+                            "size_bytes": size_bytes,
+                            "sha256": sha256,
+                            "message": f"Build '{filename}' fetched successfully from {url}."
+                        }
+                        await harness.post_agent_log(f"Fetched build from {url}: {size_bytes} bytes")
+                        await harness.send_agent_message(
+                            recipient=sender,
+                            message=f"Build '{filename}' fetched ({size_bytes} bytes, SHA256: {sha256[:8]})",
+                            data=report
+                        )
+                        print(f"    {GREEN}✅ Build fetched to {target_path} ({size_bytes} bytes){RESET}")
+                    else:
+                        err_report = {"success": False, "error": res.get("stderr") or "Empty or failed download"}
+                        await harness.send_agent_message(recipient=sender, message=f"Failed to fetch build: {err_report['error']}", data=err_report)
 
                 elif action == "cognitive_bridge":
                     print(f"    {MAGENTA}🧠 Routing Cognitive Task to Antigravity Brain...{RESET}")
