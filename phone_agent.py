@@ -204,6 +204,8 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                         action = "git_sync"
                     elif text.lower() in ["verify", "verify_install"]:
                         action = "verify_install"
+                    elif text.startswith("task:") or text.startswith("ask:") or data.get("cognitive") or action == "cognitive":
+                        action = "cognitive_bridge"
                     else:
                         action = "echo"
 
@@ -266,13 +268,37 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                     )
                     print(f"    {GREEN}✅ Pong sent to {sender}{RESET}")
 
+                elif action == "cognitive_bridge":
+                    print(f"    {MAGENTA}🧠 Routing Cognitive Task to Antigravity Brain...{RESET}")
+                    signal_path = os.path.join(SCRIPT_DIR, ".antigravity_bridge.json")
+                    try:
+                        with open(signal_path, "w", encoding="utf-8") as sf:
+                            json.dump({
+                                "sender": sender,
+                                "message": text,
+                                "data": data,
+                                "timestamp": time.time()
+                            }, sf, indent=2)
+                        await harness.post_agent_log(f"Queued cognitive task #{msg.get('id')} for Antigravity Brain")
+                        await harness.send_agent_message(
+                            recipient=sender,
+                            message=f"Directive queued for Antigravity Brain: '{text[:60]}'",
+                            data={"action": "ack", "status": "queued_for_brain"}
+                        )
+                        print(f"    {GREEN}✅ Bridge signal emitted for Antigravity{RESET}")
+                    except Exception as be:
+                        print(f"    {YELLOW}⚠️ Bridge write error: {be}{RESET}")
+
+                elif text.startswith("Acknowledged:") or text.startswith("Command '") or text.startswith("PONG"):
+                    # Ignore recursive acks/replies
+                    print(f"    {GREEN}ℹ️ Received response from {sender}: {text[:80]}{RESET}")
                 else:
                     # Generic acknowledgement
                     reply_text = f"Acknowledged: '{text}'. Ready for directives."
                     await harness.send_agent_message(
                         recipient=sender,
                         message=reply_text,
-                        data={"handled_at": time.time()}
+                        data={"handled_at": time.time(), "action": "ack"}
                     )
                     print(f"    {GREEN}✅ Acknowledged to {sender}{RESET}")
 
