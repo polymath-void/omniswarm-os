@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+#!/data/data/com.termux/files/usr/bin/python3
 """
 Dynamic DocGen CLI
 =============================================================================
 Command-line interface for the Dynamic DocGen Living Architecture Engine.
 Builds, serves, and watches documentation for Python & JS/TS codebases.
+Works standalone on any target project directory.
 =============================================================================
 """
 
@@ -11,14 +12,15 @@ import os
 import sys
 import json
 import time
+import shutil
 import http.server
 import socketserver
 import argparse
-from typing import Optional
+from typing import Optional, List
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-if SCRIPT_DIR not in sys.path:
-    sys.path.insert(0, SCRIPT_DIR)
+DOCGEN_DIR = os.path.dirname(os.path.abspath(__file__))
+if DOCGEN_DIR not in sys.path:
+    sys.path.insert(0, DOCGEN_DIR)
 
 from docgen.compiler import DocGenCompiler
 
@@ -29,7 +31,7 @@ MAGENTA = "\033[95m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-def run_build(target_dir: str, output_paths: Optional[list] = None) -> dict:
+def run_build(target_dir: str, output_paths: Optional[List[str]] = None, bundle_ui: bool = False) -> dict:
     target = os.path.abspath(target_dir)
     print(f"\n{CYAN}{BOLD}⚡ Compiling Living Documentation for:{RESET} {target}")
     compiler = DocGenCompiler(root_dir=target)
@@ -38,22 +40,43 @@ def run_build(target_dir: str, output_paths: Optional[list] = None) -> dict:
     stats = manifest["project"]["stats"]
     duration = manifest["project"]["build_duration_sec"]
 
-    # Default output locations
-    if not output_paths:
-        output_paths = [
-            os.path.join(target, "docs_manifest.json"),
-            os.path.join(target, "docgen", "ui", "public", "docs_manifest.json"),
-            os.path.join(target, "docgen", "ui", "dist", "docs_manifest.json")
-        ]
+    # Target manifest location
+    target_manifest = os.path.join(target, "docs_manifest.json")
+    targets_to_write = [target_manifest]
 
-    for out in output_paths:
+    # Also update DocGen's internal UI locations if DocGen is local
+    docgen_ui_dist = os.path.join(DOCGEN_DIR, "docgen", "ui", "dist", "docs_manifest.json")
+    docgen_ui_pub = os.path.join(DOCGEN_DIR, "docgen", "ui", "public", "docs_manifest.json")
+    for d in [docgen_ui_dist, docgen_ui_pub]:
+        if os.path.exists(os.path.dirname(d)) and d not in targets_to_write:
+            targets_to_write.append(d)
+
+    if output_paths:
+        for out in output_paths:
+            p = os.path.abspath(out)
+            if p not in targets_to_write:
+                targets_to_write.append(p)
+
+    for out in targets_to_write:
         try:
             os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
             with open(out, "w", encoding="utf-8") as f:
                 json.dump(manifest, f, indent=2)
-            print(f"  {GREEN}✅ Written:{RESET} {os.path.relpath(out, target)}")
+            rel_label = os.path.relpath(out, target) if out.startswith(target) else out
+            print(f"  {GREEN}✅ Written:{RESET} {rel_label}")
         except Exception as e:
             print(f"  {YELLOW}⚠️ Could not write {out}: {e}{RESET}")
+
+    # Optionally copy static UI into target project
+    if bundle_ui:
+        dest_ui_dir = os.path.join(target, "docs_ui")
+        src_dist = os.path.join(DOCGEN_DIR, "docgen", "ui", "dist")
+        if os.path.exists(src_dist):
+            try:
+                shutil.copytree(src_dist, dest_ui_dir, dirs_exist_ok=True)
+                print(f"  {GREEN}✅ Bundled Static UI into:{RESET} {os.path.relpath(dest_ui_dir, target)}/")
+            except Exception as e:
+                print(f"  {YELLOW}⚠️ Could not bundle UI: {e}{RESET}")
 
     print(f"\n{GREEN}{BOLD}🎉 Build Completed in {duration}s!{RESET}")
     print(f"  📁 Total Files      : {stats['total_files']}")
@@ -66,23 +89,65 @@ def run_build(target_dir: str, output_paths: Optional[list] = None) -> dict:
 
     return manifest
 
-def run_serve(dist_dir: str, port: int = 8088):
-    target = os.path.abspath(dist_dir)
-    if not os.path.exists(target):
-        # Fallback to docgen/ui or project root
-        ui_public = os.path.join(SCRIPT_DIR, "docgen", "ui", "public")
-        target = ui_public if os.path.exists(ui_public) else SCRIPT_DIR
+class DynamicDocGenHTTPHandler(http.server.SimpleHTTPRequestHandler):
+    """
+    Custom HTTP request handler that serves the DocGen UI while dynamically
+    routing /docs_manifest.json to the target project's manifest.
+    """
+    target_manifest_path = None
 
-    os.chdir(target)
-    handler = http.server.SimpleHTTPRequestHandler
+    def do_GET(self):
+        clean_path = self.path.split('?')[0]
+        if clean_path in ["/docs_manifest.json", "/public/docs_manifest.json"]:
+            if self.target_manifest_path and os.path.exists(self.target_manifest_path):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                with open(self.target_manifest_path, "rb") as f:
+                    self.wfile.write(f.read())
+                return
+        return super().do_GET()
+
+def run_serve(target_or_dist: str, port: int = 8088):
+    target = os.path.abspath(target_or_dist)
+    docgen_dist = os.path.join(DOCGEN_DIR, "docgen", "ui", "dist")
+
+    manifest_path = None
+    serve_dir = docgen_dist
+
+    # If target has a docs_manifest.json directly:
+    if os.path.isfile(target) and target.endswith(".json"):
+        manifest_path = target
+        serve_dir = docgen_dist
+    elif os.path.isdir(target):
+        candidate_manifest = os.path.join(target, "docs_manifest.json")
+        if os.path.exists(candidate_manifest):
+            manifest_path = candidate_manifest
+        candidate_index = os.path.join(target, "index.html")
+        if os.path.exists(candidate_index):
+            serve_dir = target
+        else:
+            serve_dir = docgen_dist
+
+    if not os.path.exists(serve_dir):
+        serve_dir = os.path.join(DOCGEN_DIR, "docgen", "ui", "public")
+
+    DynamicDocGenHTTPHandler.target_manifest_path = manifest_path
+
+    # Allow immediate socket reuse to prevent Address already in use
+    socketserver.TCPServer.allow_reuse_address = True
     
     print(f"\n{MAGENTA}{BOLD}======================================================={RESET}")
     print(f"{MAGENTA}{BOLD}  🌐 Dynamic DocGen Living UI Server Running           {RESET}")
     print(f"{MAGENTA}{BOLD}  Local Address : http://localhost:{port}             {RESET}")
-    print(f"{MAGENTA}{BOLD}  Serving Path  : {target}                            {RESET}")
+    print(f"{MAGENTA}{BOLD}  Serving UI    : {serve_dir}                         {RESET}")
+    if manifest_path:
+        print(f"{MAGENTA}{BOLD}  Manifest Target: {manifest_path}                    {RESET}")
     print(f"{MAGENTA}{BOLD}======================================================={RESET}\n")
 
-    with socketserver.TCPServer(("", port), handler) as httpd:
+    os.chdir(serve_dir)
+    with socketserver.TCPServer(("", port), DynamicDocGenHTTPHandler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
@@ -97,7 +162,6 @@ def run_watch(target_dir: str, interval: float = 2.0):
     try:
         while True:
             time.sleep(interval)
-            # Check if any .py, .js, .ts file modified since last_run
             changed = False
             for root, dirs, files in os.walk(target):
                 dirs[:] = [d for d in dirs if d not in {".git", "node_modules", "dist", "build", "__pycache__"}]
@@ -125,21 +189,25 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
 
     build_p = subparsers.add_parser("build", help="Build living documentation manifest")
-    build_p.add_argument("--dir", default=".", help="Root directory to analyze")
+    build_p.add_argument("--dir", default=".", help="Root directory to analyze (default: current directory)")
     build_p.add_argument("--out", nargs="*", help="Custom output JSON path(s)")
+    build_p.add_argument("--bundle-ui", action="store_true", help="Bundle static HTML/JS UI into target docs_ui/ directory")
 
     serve_p = subparsers.add_parser("serve", help="Serve static documentation UI")
-    serve_p.add_argument("--dir", default="./docgen/ui/dist", help="Directory to serve")
-    serve_p.add_argument("--port", type=int, default=8088, help="Port to bind")
+    serve_p.add_argument("--dir", default=".", help="Project directory or dist path to serve (default: current directory)")
+    serve_p.add_argument("--port", type=int, default=8088, help="Port to bind (default: 8088)")
 
     watch_p = subparsers.add_parser("watch", help="Continuously watch and re-index on change")
-    watch_p.add_argument("--dir", default=".", help="Root directory to watch")
+    watch_p.add_argument("--dir", default=".", help="Root directory to watch (default: current directory)")
     watch_p.add_argument("--interval", type=float, default=2.0, help="Check interval in seconds")
 
     args = parser.parse_args()
 
     if args.command == "build" or not args.command:
-        run_build(getattr(args, "dir", "."), getattr(args, "out", None))
+        target = getattr(args, "dir", ".")
+        out = getattr(args, "out", None)
+        bundle = getattr(args, "bundle_ui", False)
+        run_build(target, out, bundle)
     elif args.command == "serve":
         run_serve(args.dir, args.port)
     elif args.command == "watch":

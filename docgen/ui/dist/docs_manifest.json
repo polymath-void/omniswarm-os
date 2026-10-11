@@ -2,14 +2,14 @@
   "project": {
     "name": "omniswarm-os",
     "root": "/data/data/com.termux/files/home/Projects/omniswarm-os",
-    "compiled_at": "2026-10-11 06:18:45",
-    "build_duration_sec": 0.028,
+    "compiled_at": "2026-10-11 06:38:59",
+    "build_duration_sec": 0.071,
     "stats": {
-      "total_files": 54,
-      "total_loc": 6193,
-      "total_classes": 22,
-      "total_functions": 188,
-      "avg_complexity": 4.24
+      "total_files": 55,
+      "total_loc": 6476,
+      "total_classes": 24,
+      "total_functions": 194,
+      "avg_complexity": 4.26
     }
   },
   "symbols": {
@@ -1711,56 +1711,157 @@
       "name": "docgen_cli.py",
       "type": "module",
       "file": "docgen_cli.py",
-      "docstring": "Dynamic DocGen CLI\n=============================================================================\nCommand-line interface for the Dynamic DocGen Living Architecture Engine.\nBuilds, serves, and watches documentation for Python & JS/TS codebases.\n=============================================================================",
-      "loc": 149,
+      "docstring": "Dynamic DocGen CLI\n=============================================================================\nCommand-line interface for the Dynamic DocGen Living Architecture Engine.\nBuilds, serves, and watches documentation for Python & JS/TS codebases.\nWorks standalone on any target project directory.\n=============================================================================",
+      "loc": 217,
       "imports": [
         {
           "module": "os",
           "alias": "os",
-          "line": 10
+          "line": 11
         },
         {
           "module": "sys",
           "alias": "sys",
-          "line": 11
+          "line": 12
         },
         {
           "module": "json",
           "alias": "json",
-          "line": 12
+          "line": 13
         },
         {
           "module": "time",
           "alias": "time",
-          "line": 13
+          "line": 14
+        },
+        {
+          "module": "shutil",
+          "alias": "shutil",
+          "line": 15
         },
         {
           "module": "http.server",
           "alias": "http.server",
-          "line": 14
+          "line": 16
         },
         {
           "module": "socketserver",
           "alias": "socketserver",
-          "line": 15
+          "line": 17
         },
         {
           "module": "argparse",
           "alias": "argparse",
-          "line": 16
+          "line": 18
         },
         {
           "module": "typing.Optional",
           "alias": "Optional",
-          "line": 17
+          "line": 19
+        },
+        {
+          "module": "typing.List",
+          "alias": "List",
+          "line": 19
         },
         {
           "module": "docgen.compiler.DocGenCompiler",
           "alias": "DocGenCompiler",
-          "line": 23
+          "line": 25
         }
       ],
       "callers": []
+    },
+    "docgen_cli.py:DynamicDocGenHTTPHandler": {
+      "name": "DynamicDocGenHTTPHandler",
+      "full_name": "docgen_cli.py:DynamicDocGenHTTPHandler",
+      "type": "class",
+      "file": "docgen_cli.py",
+      "line": 92,
+      "end_line": 110,
+      "bases": [
+        "http.server.SimpleHTTPRequestHandler"
+      ],
+      "decorators": [],
+      "docstring": "Custom HTTP request handler that serves the DocGen UI while dynamically\nrouting /docs_manifest.json to the target project's manifest.",
+      "methods": [
+        {
+          "name": "do_GET",
+          "full_name": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+          "parent_class": "DynamicDocGenHTTPHandler",
+          "type": "method",
+          "file": "docgen_cli.py",
+          "line": 99,
+          "end_line": 110,
+          "is_async": false,
+          "signature": "def do_GET(self) -> None",
+          "args": [
+            {
+              "name": "self",
+              "type": "Any"
+            }
+          ],
+          "returns": "None",
+          "decorators": [],
+          "complexity": 5,
+          "docstring": "",
+          "calls": [
+            "do_GET",
+            "split",
+            "exists",
+            "send_response",
+            "send_header",
+            "end_headers",
+            "super",
+            "open",
+            "write",
+            "read"
+          ],
+          "source": "    def do_GET(self):\n        clean_path = self.path.split('?')[0]\n        if clean_path in [\"/docs_manifest.json\", \"/public/docs_manifest.json\"]:\n            if self.target_manifest_path and os.path.exists(self.target_manifest_path):\n                self.send_response(200)\n                self.send_header(\"Content-Type\", \"application/json\")\n                self.send_header(\"Access-Control-Allow-Origin\", \"*\")\n                self.end_headers()\n                with open(self.target_manifest_path, \"rb\") as f:\n                    self.wfile.write(f.read())\n                return\n        return super().do_GET()",
+          "callers": [
+            "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET"
+          ]
+        }
+      ],
+      "source": "class DynamicDocGenHTTPHandler(http.server.SimpleHTTPRequestHandler):\n    \"\"\"\n    Custom HTTP request handler that serves the DocGen UI while dynamically\n    routing /docs_manifest.json to the target project's manifest.\n    \"\"\"\n    target_manifest_path = None\n\n    def do_GET(self):\n        clean_path = self.path.split('?')[0]\n        if clean_path in [\"/docs_manifest.json\", \"/public/docs_manifest.json\"]:\n            if self.target_manifest_path and os.path.exists(self.target_manifest_path):\n                self.send_response(200)\n                self.send_header(\"Content-Type\", \"application/json\")\n                self.send_header(\"Access-Control-Allow-Origin\", \"*\")\n                self.end_headers()\n                with open(self.target_manifest_path, \"rb\") as f:\n                    self.wfile.write(f.read())\n                return\n        return super().do_GET()",
+      "callers": []
+    },
+    "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET": {
+      "name": "do_GET",
+      "full_name": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+      "parent_class": "DynamicDocGenHTTPHandler",
+      "type": "method",
+      "file": "docgen_cli.py",
+      "line": 99,
+      "end_line": 110,
+      "is_async": false,
+      "signature": "def do_GET(self) -> None",
+      "args": [
+        {
+          "name": "self",
+          "type": "Any"
+        }
+      ],
+      "returns": "None",
+      "decorators": [],
+      "complexity": 5,
+      "docstring": "",
+      "calls": [
+        "do_GET",
+        "split",
+        "exists",
+        "send_response",
+        "send_header",
+        "end_headers",
+        "super",
+        "open",
+        "write",
+        "read"
+      ],
+      "source": "    def do_GET(self):\n        clean_path = self.path.split('?')[0]\n        if clean_path in [\"/docs_manifest.json\", \"/public/docs_manifest.json\"]:\n            if self.target_manifest_path and os.path.exists(self.target_manifest_path):\n                self.send_response(200)\n                self.send_header(\"Content-Type\", \"application/json\")\n                self.send_header(\"Access-Control-Allow-Origin\", \"*\")\n                self.end_headers()\n                with open(self.target_manifest_path, \"rb\") as f:\n                    self.wfile.write(f.read())\n                return\n        return super().do_GET()",
+      "callers": [
+        "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET"
+      ]
     },
     "docgen_cli.py:run_build": {
       "name": "run_build",
@@ -1768,10 +1869,10 @@
       "parent_class": null,
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 32,
-      "end_line": 67,
+      "line": 34,
+      "end_line": 90,
       "is_async": false,
-      "signature": "def run_build(target_dir: str, output_paths: Optional[list]) -> dict",
+      "signature": "def run_build(target_dir: str, output_paths: Optional[List[str]], bundle_ui: bool) -> dict",
       "args": [
         {
           "name": "target_dir",
@@ -1779,12 +1880,16 @@
         },
         {
           "name": "output_paths",
-          "type": "Optional[list]"
+          "type": "Optional[List[str]]"
+        },
+        {
+          "name": "bundle_ui",
+          "type": "bool"
         }
       ],
       "returns": "dict",
       "decorators": [],
-      "complexity": 5,
+      "complexity": 13,
       "docstring": "",
       "calls": [
         "abspath",
@@ -1792,14 +1897,18 @@
         "DocGenCompiler",
         "compile",
         "join",
+        "exists",
+        "append",
         "makedirs",
         "dirname",
         "open",
         "dump",
-        "len",
-        "relpath"
+        "startswith",
+        "relpath",
+        "copytree",
+        "len"
       ],
-      "source": "def run_build(target_dir: str, output_paths: Optional[list] = None) -> dict:\n    target = os.path.abspath(target_dir)\n    print(f\"\\n{CYAN}{BOLD}\u26a1 Compiling Living Documentation for:{RESET} {target}\")\n    compiler = DocGenCompiler(root_dir=target)\n    manifest = compiler.compile()\n\n    stats = manifest[\"project\"][\"stats\"]\n    duration = manifest[\"project\"][\"build_duration_sec\"]\n\n    # Default output locations\n    if not output_paths:\n        output_paths = [\n            os.path.join(target, \"docs_manifest.json\"),\n            os.path.join(target, \"docgen\", \"ui\", \"public\", \"docs_manifest.json\"),\n            os.path.join(target, \"docgen\", \"ui\", \"dist\", \"docs_manifest.json\")\n        ]\n\n    for out in output_paths:\n        try:\n            os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)\n            with open(out, \"w\", encoding=\"utf-8\") as f:\n                json.dump(manifest, f, indent=2)\n            print(f\"  {GREEN}\u2705 Written:{RESET} {os.path.relpath(out, target)}\")\n        except Exception as e:\n            print(f\"  {YELLOW}\u26a0\ufe0f Could not write {out}: {e}{RESET}\")\n\n    print(f\"\\n{GREEN}{BOLD}\ud83c\udf89 Build Completed in {duration}s!{RESET}\")\n    print(f\"  \ud83d\udcc1 Total Files      : {stats['total_files']}\")\n    print(f\"  \ud83d\udcdd Lines of Code    : {stats['total_loc']:,}\")\n    print(f\"  \ud83c\udfdb\ufe0f Classes Parsed   : {stats['total_classes']}\")\n    print(f\"  \u26a1 Functions/Methods: {stats['total_functions']}\")\n    print(f\"  \ud83e\udde9 Avg Complexity   : {stats['avg_complexity']}\")\n    print(f\"  \ud83d\udd17 Graph Nodes      : {len(manifest['graph']['nodes'])}\")\n    print(f\"  \ud83d\udd17 Graph Edges      : {len(manifest['graph']['edges'])}\\n\")\n\n    return manifest",
+      "source": "def run_build(target_dir: str, output_paths: Optional[List[str]] = None, bundle_ui: bool = False) -> dict:\n    target = os.path.abspath(target_dir)\n    print(f\"\\n{CYAN}{BOLD}\u26a1 Compiling Living Documentation for:{RESET} {target}\")\n    compiler = DocGenCompiler(root_dir=target)\n    manifest = compiler.compile()\n\n    stats = manifest[\"project\"][\"stats\"]\n    duration = manifest[\"project\"][\"build_duration_sec\"]\n\n    # Target manifest location\n    target_manifest = os.path.join(target, \"docs_manifest.json\")\n    targets_to_write = [target_manifest]\n\n    # Also update DocGen's internal UI locations if DocGen is local\n    docgen_ui_dist = os.path.join(DOCGEN_DIR, \"docgen\", \"ui\", \"dist\", \"docs_manifest.json\")\n    docgen_ui_pub = os.path.join(DOCGEN_DIR, \"docgen\", \"ui\", \"public\", \"docs_manifest.json\")\n    for d in [docgen_ui_dist, docgen_ui_pub]:\n        if os.path.exists(os.path.dirname(d)) and d not in targets_to_write:\n            targets_to_write.append(d)\n\n    if output_paths:\n        for out in output_paths:\n            p = os.path.abspath(out)\n            if p not in targets_to_write:\n                targets_to_write.append(p)\n\n    for out in targets_to_write:\n        try:\n            os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)\n            with open(out, \"w\", encoding=\"utf-8\") as f:\n                json.dump(manifest, f, indent=2)\n            rel_label = os.path.relpath(out, target) if out.startswith(target) else out\n            print(f\"  {GREEN}\u2705 Written:{RESET} {rel_label}\")\n        except Exception as e:\n            print(f\"  {YELLOW}\u26a0\ufe0f Could not write {out}: {e}{RESET}\")\n\n    # Optionally copy static UI into target project\n    if bundle_ui:\n        dest_ui_dir = os.path.join(target, \"docs_ui\")\n        src_dist = os.path.join(DOCGEN_DIR, \"docgen\", \"ui\", \"dist\")\n        if os.path.exists(src_dist):\n            try:\n                shutil.copytree(src_dist, dest_ui_dir, dirs_exist_ok=True)\n                print(f\"  {GREEN}\u2705 Bundled Static UI into:{RESET} {os.path.relpath(dest_ui_dir, target)}/\")\n            except Exception as e:\n                print(f\"  {YELLOW}\u26a0\ufe0f Could not bundle UI: {e}{RESET}\")\n\n    print(f\"\\n{GREEN}{BOLD}\ud83c\udf89 Build Completed in {duration}s!{RESET}\")\n    print(f\"  \ud83d\udcc1 Total Files      : {stats['total_files']}\")\n    print(f\"  \ud83d\udcdd Lines of Code    : {stats['total_loc']:,}\")\n    print(f\"  \ud83c\udfdb\ufe0f Classes Parsed   : {stats['total_classes']}\")\n    print(f\"  \u26a1 Functions/Methods: {stats['total_functions']}\")\n    print(f\"  \ud83e\udde9 Avg Complexity   : {stats['avg_complexity']}\")\n    print(f\"  \ud83d\udd17 Graph Nodes      : {len(manifest['graph']['nodes'])}\")\n    print(f\"  \ud83d\udd17 Graph Edges      : {len(manifest['graph']['edges'])}\\n\")\n\n    return manifest",
       "callers": [
         "docgen_cli.py:run_watch",
         "docgen_cli.py:main"
@@ -1811,13 +1920,13 @@
       "parent_class": null,
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 69,
-      "end_line": 89,
+      "line": 112,
+      "end_line": 154,
       "is_async": false,
-      "signature": "def run_serve(dist_dir: str, port: int) -> None",
+      "signature": "def run_serve(target_or_dist: str, port: int) -> None",
       "args": [
         {
-          "name": "dist_dir",
+          "name": "target_or_dist",
           "type": "str"
         },
         {
@@ -1827,18 +1936,21 @@
       ],
       "returns": "None",
       "decorators": [],
-      "complexity": 4,
+      "complexity": 10,
       "docstring": "",
       "calls": [
         "abspath",
-        "chdir",
-        "print",
-        "exists",
         "join",
+        "print",
+        "chdir",
+        "isfile",
+        "endswith",
+        "isdir",
+        "exists",
         "TCPServer",
         "serve_forever"
       ],
-      "source": "def run_serve(dist_dir: str, port: int = 8088):\n    target = os.path.abspath(dist_dir)\n    if not os.path.exists(target):\n        # Fallback to docgen/ui or project root\n        ui_public = os.path.join(SCRIPT_DIR, \"docgen\", \"ui\", \"public\")\n        target = ui_public if os.path.exists(ui_public) else SCRIPT_DIR\n\n    os.chdir(target)\n    handler = http.server.SimpleHTTPRequestHandler\n    \n    print(f\"\\n{MAGENTA}{BOLD}======================================================={RESET}\")\n    print(f\"{MAGENTA}{BOLD}  \ud83c\udf10 Dynamic DocGen Living UI Server Running           {RESET}\")\n    print(f\"{MAGENTA}{BOLD}  Local Address : http://localhost:{port}             {RESET}\")\n    print(f\"{MAGENTA}{BOLD}  Serving Path  : {target}                            {RESET}\")\n    print(f\"{MAGENTA}{BOLD}======================================================={RESET}\\n\")\n\n    with socketserver.TCPServer((\"\", port), handler) as httpd:\n        try:\n            httpd.serve_forever()\n        except KeyboardInterrupt:\n            print(f\"\\n{YELLOW}Stopping DocGen server...{RESET}\")",
+      "source": "def run_serve(target_or_dist: str, port: int = 8088):\n    target = os.path.abspath(target_or_dist)\n    docgen_dist = os.path.join(DOCGEN_DIR, \"docgen\", \"ui\", \"dist\")\n\n    manifest_path = None\n    serve_dir = docgen_dist\n\n    # If target has a docs_manifest.json directly:\n    if os.path.isfile(target) and target.endswith(\".json\"):\n        manifest_path = target\n        serve_dir = docgen_dist\n    elif os.path.isdir(target):\n        candidate_manifest = os.path.join(target, \"docs_manifest.json\")\n        if os.path.exists(candidate_manifest):\n            manifest_path = candidate_manifest\n        candidate_index = os.path.join(target, \"index.html\")\n        if os.path.exists(candidate_index):\n            serve_dir = target\n        else:\n            serve_dir = docgen_dist\n\n    if not os.path.exists(serve_dir):\n        serve_dir = os.path.join(DOCGEN_DIR, \"docgen\", \"ui\", \"public\")\n\n    DynamicDocGenHTTPHandler.target_manifest_path = manifest_path\n\n    # Allow immediate socket reuse to prevent Address already in use\n    socketserver.TCPServer.allow_reuse_address = True\n    \n    print(f\"\\n{MAGENTA}{BOLD}======================================================={RESET}\")\n    print(f\"{MAGENTA}{BOLD}  \ud83c\udf10 Dynamic DocGen Living UI Server Running           {RESET}\")\n    print(f\"{MAGENTA}{BOLD}  Local Address : http://localhost:{port}             {RESET}\")\n    print(f\"{MAGENTA}{BOLD}  Serving UI    : {serve_dir}                         {RESET}\")\n    if manifest_path:\n        print(f\"{MAGENTA}{BOLD}  Manifest Target: {manifest_path}                    {RESET}\")\n    print(f\"{MAGENTA}{BOLD}======================================================={RESET}\\n\")\n\n    os.chdir(serve_dir)\n    with socketserver.TCPServer((\"\", port), DynamicDocGenHTTPHandler) as httpd:\n        try:\n            httpd.serve_forever()\n        except KeyboardInterrupt:\n            print(f\"\\n{YELLOW}Stopping DocGen server...{RESET}\")",
       "callers": [
         "docgen_cli.py:main"
       ]
@@ -1849,8 +1961,8 @@
       "parent_class": null,
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 91,
-      "end_line": 121,
+      "line": 156,
+      "end_line": 185,
       "is_async": false,
       "signature": "def run_watch(target_dir: str, interval: float) -> None",
       "args": [
@@ -1878,7 +1990,7 @@
         "join",
         "getmtime"
       ],
-      "source": "def run_watch(target_dir: str, interval: float = 2.0):\n    target = os.path.abspath(target_dir)\n    print(f\"{CYAN}\ud83d\udc40 Watching {target} for code changes (interval: {interval}s)...{RESET}\")\n    last_run = time.time()\n    run_build(target)\n\n    try:\n        while True:\n            time.sleep(interval)\n            # Check if any .py, .js, .ts file modified since last_run\n            changed = False\n            for root, dirs, files in os.walk(target):\n                dirs[:] = [d for d in dirs if d not in {\".git\", \"node_modules\", \"dist\", \"build\", \"__pycache__\"}]\n                for file in files:\n                    if file.endswith((\".py\", \".js\", \".jsx\", \".ts\", \".tsx\")):\n                        fp = os.path.join(root, file)\n                        try:\n                            if os.path.getmtime(fp) > last_run:\n                                changed = True\n                                break\n                        except Exception:\n                            pass\n                if changed:\n                    break\n\n            if changed:\n                last_run = time.time()\n                print(f\"\\n{YELLOW}\ud83d\udd04 Change detected. Re-indexing...{RESET}\")\n                run_build(target)\n    except KeyboardInterrupt:\n        print(f\"\\n{YELLOW}Stopping DocGen watcher.{RESET}\")",
+      "source": "def run_watch(target_dir: str, interval: float = 2.0):\n    target = os.path.abspath(target_dir)\n    print(f\"{CYAN}\ud83d\udc40 Watching {target} for code changes (interval: {interval}s)...{RESET}\")\n    last_run = time.time()\n    run_build(target)\n\n    try:\n        while True:\n            time.sleep(interval)\n            changed = False\n            for root, dirs, files in os.walk(target):\n                dirs[:] = [d for d in dirs if d not in {\".git\", \"node_modules\", \"dist\", \"build\", \"__pycache__\"}]\n                for file in files:\n                    if file.endswith((\".py\", \".js\", \".jsx\", \".ts\", \".tsx\")):\n                        fp = os.path.join(root, file)\n                        try:\n                            if os.path.getmtime(fp) > last_run:\n                                changed = True\n                                break\n                        except Exception:\n                            pass\n                if changed:\n                    break\n\n            if changed:\n                last_run = time.time()\n                print(f\"\\n{YELLOW}\ud83d\udd04 Change detected. Re-indexing...{RESET}\")\n                run_build(target)\n    except KeyboardInterrupt:\n        print(f\"\\n{YELLOW}Stopping DocGen watcher.{RESET}\")",
       "callers": [
         "docgen_cli.py:main"
       ]
@@ -1889,8 +2001,8 @@
       "parent_class": null,
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 123,
-      "end_line": 146,
+      "line": 187,
+      "end_line": 214,
       "is_async": false,
       "signature": "def main() -> None",
       "args": [],
@@ -1904,12 +2016,388 @@
         "add_parser",
         "add_argument",
         "parse_args",
-        "run_build",
         "getattr",
+        "run_build",
         "run_serve",
         "run_watch"
       ],
-      "source": "def main():\n    parser = argparse.ArgumentParser(description=\"Dynamic DocGen Living Architecture CLI\")\n    subparsers = parser.add_subparsers(dest=\"command\")\n\n    build_p = subparsers.add_parser(\"build\", help=\"Build living documentation manifest\")\n    build_p.add_argument(\"--dir\", default=\".\", help=\"Root directory to analyze\")\n    build_p.add_argument(\"--out\", nargs=\"*\", help=\"Custom output JSON path(s)\")\n\n    serve_p = subparsers.add_parser(\"serve\", help=\"Serve static documentation UI\")\n    serve_p.add_argument(\"--dir\", default=\"./docgen/ui/dist\", help=\"Directory to serve\")\n    serve_p.add_argument(\"--port\", type=int, default=8088, help=\"Port to bind\")\n\n    watch_p = subparsers.add_parser(\"watch\", help=\"Continuously watch and re-index on change\")\n    watch_p.add_argument(\"--dir\", default=\".\", help=\"Root directory to watch\")\n    watch_p.add_argument(\"--interval\", type=float, default=2.0, help=\"Check interval in seconds\")\n\n    args = parser.parse_args()\n\n    if args.command == \"build\" or not args.command:\n        run_build(getattr(args, \"dir\", \".\"), getattr(args, \"out\", None))\n    elif args.command == \"serve\":\n        run_serve(args.dir, args.port)\n    elif args.command == \"watch\":\n        run_watch(args.dir, args.interval)",
+      "source": "def main():\n    parser = argparse.ArgumentParser(description=\"Dynamic DocGen Living Architecture CLI\")\n    subparsers = parser.add_subparsers(dest=\"command\")\n\n    build_p = subparsers.add_parser(\"build\", help=\"Build living documentation manifest\")\n    build_p.add_argument(\"--dir\", default=\".\", help=\"Root directory to analyze (default: current directory)\")\n    build_p.add_argument(\"--out\", nargs=\"*\", help=\"Custom output JSON path(s)\")\n    build_p.add_argument(\"--bundle-ui\", action=\"store_true\", help=\"Bundle static HTML/JS UI into target docs_ui/ directory\")\n\n    serve_p = subparsers.add_parser(\"serve\", help=\"Serve static documentation UI\")\n    serve_p.add_argument(\"--dir\", default=\".\", help=\"Project directory or dist path to serve (default: current directory)\")\n    serve_p.add_argument(\"--port\", type=int, default=8088, help=\"Port to bind (default: 8088)\")\n\n    watch_p = subparsers.add_parser(\"watch\", help=\"Continuously watch and re-index on change\")\n    watch_p.add_argument(\"--dir\", default=\".\", help=\"Root directory to watch (default: current directory)\")\n    watch_p.add_argument(\"--interval\", type=float, default=2.0, help=\"Check interval in seconds\")\n\n    args = parser.parse_args()\n\n    if args.command == \"build\" or not args.command:\n        target = getattr(args, \"dir\", \".\")\n        out = getattr(args, \"out\", None)\n        bundle = getattr(args, \"bundle_ui\", False)\n        run_build(target, out, bundle)\n    elif args.command == \"serve\":\n        run_serve(args.dir, args.port)\n    elif args.command == \"watch\":\n        run_watch(args.dir, args.interval)",
+      "callers": []
+    },
+    "module:test_docgen.py": {
+      "id": "module:test_docgen.py",
+      "name": "test_docgen.py",
+      "type": "module",
+      "file": "test_docgen.py",
+      "docstring": "Test Suite for Dynamic DocGen Engine\nValidates AST extractor, Merkle cache, graph compiler, and search indexing.",
+      "loc": 110,
+      "imports": [
+        {
+          "module": "os",
+          "alias": "os",
+          "line": 7
+        },
+        {
+          "module": "sys",
+          "alias": "sys",
+          "line": 8
+        },
+        {
+          "module": "tempfile",
+          "alias": "tempfile",
+          "line": 9
+        },
+        {
+          "module": "unittest",
+          "alias": "unittest",
+          "line": 10
+        },
+        {
+          "module": "docgen.extractor.extract_file_symbols",
+          "alias": "extract_file_symbols",
+          "line": 15
+        },
+        {
+          "module": "docgen.extractor.calculate_python_complexity",
+          "alias": "calculate_python_complexity",
+          "line": 15
+        },
+        {
+          "module": "docgen.merkle.MerkleASTCache",
+          "alias": "MerkleASTCache",
+          "line": 16
+        },
+        {
+          "module": "docgen.compiler.DocGenCompiler",
+          "alias": "DocGenCompiler",
+          "line": 17
+        }
+      ],
+      "callers": []
+    },
+    "test_docgen.py:TestDynamicDocGen": {
+      "name": "TestDynamicDocGen",
+      "full_name": "test_docgen.py:TestDynamicDocGen",
+      "type": "class",
+      "file": "test_docgen.py",
+      "line": 19,
+      "end_line": 107,
+      "bases": [
+        "unittest.TestCase"
+      ],
+      "decorators": [],
+      "docstring": "",
+      "methods": [
+        {
+          "name": "setUp",
+          "full_name": "test_docgen.py:TestDynamicDocGen.setUp",
+          "parent_class": "TestDynamicDocGen",
+          "type": "method",
+          "file": "test_docgen.py",
+          "line": 21,
+          "end_line": 51,
+          "is_async": false,
+          "signature": "def setUp(self) -> None",
+          "args": [
+            {
+              "name": "self",
+              "type": "Any"
+            }
+          ],
+          "returns": "None",
+          "decorators": [],
+          "complexity": 1,
+          "docstring": "",
+          "calls": [
+            "NamedTemporaryFile",
+            "write",
+            "close"
+          ],
+          "source": "    def setUp(self):\n        self.test_code = '''\"\"\"Sample Module Docstring.\"\"\"\n\nimport os\nimport sys\n\nclass EngineCore:\n    \"\"\"The core engine class.\"\"\"\n    def __init__(self, mode: str = \"prod\"):\n        self.mode = mode\n\n    async def execute(self, payload: dict) -> bool:\n        \"\"\"Executes a payload with branching logic.\"\"\"\n        if self.mode == \"dev\":\n            print(\"Dev mode\")\n            return True\n        elif self.mode == \"prod\":\n            for item in payload.get(\"items\", []):\n                if item == \"skip\":\n                    continue\n                print(item)\n            return True\n        return False\n\ndef standalone_helper(x: int, y: int) -> int:\n    \"\"\"Helper function.\"\"\"\n    return x + y\n'''\n        self.temp_file = tempfile.NamedTemporaryFile(suffix=\".py\", mode=\"w\", delete=False)\n        self.temp_file.write(self.test_code)\n        self.temp_file.close()",
+          "callers": []
+        },
+        {
+          "name": "tearDown",
+          "full_name": "test_docgen.py:TestDynamicDocGen.tearDown",
+          "parent_class": "TestDynamicDocGen",
+          "type": "method",
+          "file": "test_docgen.py",
+          "line": 53,
+          "end_line": 55,
+          "is_async": false,
+          "signature": "def tearDown(self) -> None",
+          "args": [
+            {
+              "name": "self",
+              "type": "Any"
+            }
+          ],
+          "returns": "None",
+          "decorators": [],
+          "complexity": 2,
+          "docstring": "",
+          "calls": [
+            "exists",
+            "remove"
+          ],
+          "source": "    def tearDown(self):\n        if os.path.exists(self.temp_file.name):\n            os.remove(self.temp_file.name)",
+          "callers": []
+        },
+        {
+          "name": "test_ast_extractor",
+          "full_name": "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
+          "parent_class": "TestDynamicDocGen",
+          "type": "method",
+          "file": "test_docgen.py",
+          "line": 57,
+          "end_line": 71,
+          "is_async": false,
+          "signature": "def test_ast_extractor(self) -> None",
+          "args": [
+            {
+              "name": "self",
+              "type": "Any"
+            }
+          ],
+          "returns": "None",
+          "decorators": [],
+          "complexity": 2,
+          "docstring": "",
+          "calls": [
+            "extract_file_symbols",
+            "assertEqual",
+            "assertTrue",
+            "assertGreaterEqual",
+            "dirname",
+            "len"
+          ],
+          "source": "    def test_ast_extractor(self):\n        data = extract_file_symbols(self.temp_file.name, os.path.dirname(self.temp_file.name))\n        self.assertEqual(data[\"docstring\"], \"Sample Module Docstring.\")\n        self.assertEqual(len(data[\"classes\"]), 1)\n        self.assertEqual(data[\"classes\"][0][\"name\"], \"EngineCore\")\n        self.assertEqual(len(data[\"classes\"][0][\"methods\"]), 2)\n\n        exec_method = [m for m in data[\"classes\"][0][\"methods\"] if m[\"name\"] == \"execute\"][0]\n        self.assertTrue(exec_method[\"is_async\"])\n        self.assertGreaterEqual(exec_method[\"complexity\"], 3)\n        self.assertEqual(exec_method[\"returns\"], \"bool\")\n\n        self.assertEqual(len(data[\"functions\"]), 1)\n        self.assertEqual(data[\"functions\"][0][\"name\"], \"standalone_helper\")\n        self.assertEqual(data[\"functions\"][0][\"returns\"], \"int\")",
+          "callers": []
+        },
+        {
+          "name": "test_merkle_cache",
+          "full_name": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+          "parent_class": "TestDynamicDocGen",
+          "type": "method",
+          "file": "test_docgen.py",
+          "line": 73,
+          "end_line": 92,
+          "is_async": false,
+          "signature": "def test_merkle_cache(self) -> None",
+          "args": [
+            {
+              "name": "self",
+              "type": "Any"
+            }
+          ],
+          "returns": "None",
+          "decorators": [],
+          "complexity": 3,
+          "docstring": "",
+          "calls": [
+            "join",
+            "exists",
+            "MerkleASTCache",
+            "getmtime",
+            "assertFalse",
+            "update",
+            "save",
+            "assertTrue",
+            "assertEqual",
+            "gettempdir",
+            "remove",
+            "is_cached",
+            "get_cached_symbols"
+          ],
+          "source": "    def test_merkle_cache(self):\n        cache_path = os.path.join(tempfile.gettempdir(), \".test_docgen_cache.json\")\n        if os.path.exists(cache_path):\n            os.remove(cache_path)\n\n        cache = MerkleASTCache(cache_file=cache_path)\n        mtime = os.path.getmtime(self.temp_file.name)\n        data = {\"dummy\": \"data\"}\n\n        self.assertFalse(cache.is_cached(\"test.py\", mtime))\n        cache.update(\"test.py\", mtime, data)\n        cache.save()\n\n        # Reload\n        cache2 = MerkleASTCache(cache_file=cache_path)\n        self.assertTrue(cache2.is_cached(\"test.py\", mtime))\n        self.assertEqual(cache2.get_cached_symbols(\"test.py\"), data)\n\n        if os.path.exists(cache_path):\n            os.remove(cache_path)",
+          "callers": []
+        },
+        {
+          "name": "test_compiler_end_to_end",
+          "full_name": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+          "parent_class": "TestDynamicDocGen",
+          "type": "method",
+          "file": "test_docgen.py",
+          "line": 94,
+          "end_line": 107,
+          "is_async": false,
+          "signature": "def test_compiler_end_to_end(self) -> None",
+          "args": [
+            {
+              "name": "self",
+              "type": "Any"
+            }
+          ],
+          "returns": "None",
+          "decorators": [],
+          "complexity": 1,
+          "docstring": "",
+          "calls": [
+            "DocGenCompiler",
+            "compile",
+            "assertIn",
+            "assertGreater",
+            "len"
+          ],
+          "source": "    def test_compiler_end_to_end(self):\n        compiler = DocGenCompiler(root_dir=SCRIPT_DIR)\n        manifest = compiler.compile()\n\n        self.assertIn(\"project\", manifest)\n        self.assertIn(\"symbols\", manifest)\n        self.assertIn(\"graph\", manifest)\n        self.assertIn(\"search_index\", manifest)\n\n        stats = manifest[\"project\"][\"stats\"]\n        self.assertGreater(stats[\"total_files\"], 0)\n        self.assertGreater(stats[\"total_loc\"], 0)\n        self.assertGreater(len(manifest[\"graph\"][\"nodes\"]), 0)\n        self.assertGreater(len(manifest[\"graph\"][\"edges\"]), 0)",
+          "callers": []
+        }
+      ],
+      "source": "class TestDynamicDocGen(unittest.TestCase):\n\n    def setUp(self):\n        self.test_code = '''\"\"\"Sample Module Docstring.\"\"\"\n\nimport os\nimport sys\n\nclass EngineCore:\n    \"\"\"The core engine class.\"\"\"\n    def __init__(self, mode: str = \"prod\"):\n        self.mode = mode\n\n    async def execute(self, payload: dict) -> bool:\n        \"\"\"Executes a payload with branching logic.\"\"\"\n        if self.mode == \"dev\":\n            print(\"Dev mode\")\n            return True\n        elif self.mode == \"prod\":\n            for item in payload.get(\"items\", []):\n                if item == \"skip\":\n                    continue\n                print(item)\n            return True\n        return False\n\ndef standalone_helper(x: int, y: int) -> int:\n    \"\"\"Helper function.\"\"\"\n    return x + y\n'''\n        self.temp_file = tempfile.NamedTemporaryFile(suffix=\".py\", mode=\"w\", delete=False)\n        self.temp_file.write(self.test_code)\n        self.temp_file.close()\n\n    def tearDown(self):\n        if os.path.exists(self.temp_file.name):\n            os.remove(self.temp_file.name)\n\n    def test_ast_extractor(self):\n        data = extract_file_symbols(self.temp_file.name, os.path.dirname(self.temp_file.name))\n        self.assertEqual(data[\"docstring\"], \"Sample Module Docstring.\")\n        self.assertEqual(len(data[\"classes\"]), 1)\n        self.assertEqual(data[\"classes\"][0][\"name\"], \"EngineCore\")\n        self.assertEqual(len(data[\"classes\"][0][\"methods\"]), 2)\n\n        exec_method = [m for m in data[\"classes\"][0][\"methods\"] if m[\"name\"] == \"execute\"][0]\n        self.assertTrue(exec_method[\"is_async\"])\n        self.assertGreaterEqual(exec_method[\"complexity\"], 3)\n        self.assertEqual(exec_method[\"returns\"], \"bool\")\n\n        self.assertEqual(len(data[\"functions\"]), 1)\n        self.assertEqual(data[\"functions\"][0][\"name\"], \"standalone_helper\")\n        self.assertEqual(data[\"functions\"][0][\"returns\"], \"int\")\n\n    def test_merkle_cache(self):\n        cache_path = os.path.join(tempfile.gettempdir(), \".test_docgen_cache.json\")\n        if os.path.exists(cache_path):\n            os.remove(cache_path)\n\n        cache = MerkleASTCache(cache_file=cache_path)\n        mtime = os.path.getmtime(self.temp_file.name)\n        data = {\"dummy\": \"data\"}\n\n        self.assertFalse(cache.is_cached(\"test.py\", mtime))\n        cache.update(\"test.py\", mtime, data)\n        cache.save()\n\n        # Reload\n        cache2 = MerkleASTCache(cache_file=cache_path)\n        self.assertTrue(cache2.is_cached(\"test.py\", mtime))\n        self.assertEqual(cache2.get_cached_symbols(\"test.py\"), data)\n\n        if os.path.exists(cache_path):\n            os.remove(cache_path)\n\n    def test_compiler_end_to_end(self):\n        compiler = DocGenCompiler(root_dir=SCRIPT_DIR)\n        manifest = compiler.compile()\n\n        self.assertIn(\"project\", manifest)\n        self.assertIn(\"symbols\", manifest)\n        self.assertIn(\"graph\", manifest)\n        self.assertIn(\"search_index\", manifest)\n\n        stats = manifest[\"project\"][\"stats\"]\n        self.assertGreater(stats[\"total_files\"], 0)\n        self.assertGreater(stats[\"total_loc\"], 0)\n        self.assertGreater(len(manifest[\"graph\"][\"nodes\"]), 0)\n        self.assertGreater(len(manifest[\"graph\"][\"edges\"]), 0)",
+      "callers": []
+    },
+    "test_docgen.py:TestDynamicDocGen.setUp": {
+      "name": "setUp",
+      "full_name": "test_docgen.py:TestDynamicDocGen.setUp",
+      "parent_class": "TestDynamicDocGen",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 21,
+      "end_line": 51,
+      "is_async": false,
+      "signature": "def setUp(self) -> None",
+      "args": [
+        {
+          "name": "self",
+          "type": "Any"
+        }
+      ],
+      "returns": "None",
+      "decorators": [],
+      "complexity": 1,
+      "docstring": "",
+      "calls": [
+        "NamedTemporaryFile",
+        "write",
+        "close"
+      ],
+      "source": "    def setUp(self):\n        self.test_code = '''\"\"\"Sample Module Docstring.\"\"\"\n\nimport os\nimport sys\n\nclass EngineCore:\n    \"\"\"The core engine class.\"\"\"\n    def __init__(self, mode: str = \"prod\"):\n        self.mode = mode\n\n    async def execute(self, payload: dict) -> bool:\n        \"\"\"Executes a payload with branching logic.\"\"\"\n        if self.mode == \"dev\":\n            print(\"Dev mode\")\n            return True\n        elif self.mode == \"prod\":\n            for item in payload.get(\"items\", []):\n                if item == \"skip\":\n                    continue\n                print(item)\n            return True\n        return False\n\ndef standalone_helper(x: int, y: int) -> int:\n    \"\"\"Helper function.\"\"\"\n    return x + y\n'''\n        self.temp_file = tempfile.NamedTemporaryFile(suffix=\".py\", mode=\"w\", delete=False)\n        self.temp_file.write(self.test_code)\n        self.temp_file.close()",
+      "callers": []
+    },
+    "test_docgen.py:TestDynamicDocGen.tearDown": {
+      "name": "tearDown",
+      "full_name": "test_docgen.py:TestDynamicDocGen.tearDown",
+      "parent_class": "TestDynamicDocGen",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 53,
+      "end_line": 55,
+      "is_async": false,
+      "signature": "def tearDown(self) -> None",
+      "args": [
+        {
+          "name": "self",
+          "type": "Any"
+        }
+      ],
+      "returns": "None",
+      "decorators": [],
+      "complexity": 2,
+      "docstring": "",
+      "calls": [
+        "exists",
+        "remove"
+      ],
+      "source": "    def tearDown(self):\n        if os.path.exists(self.temp_file.name):\n            os.remove(self.temp_file.name)",
+      "callers": []
+    },
+    "test_docgen.py:TestDynamicDocGen.test_ast_extractor": {
+      "name": "test_ast_extractor",
+      "full_name": "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
+      "parent_class": "TestDynamicDocGen",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 57,
+      "end_line": 71,
+      "is_async": false,
+      "signature": "def test_ast_extractor(self) -> None",
+      "args": [
+        {
+          "name": "self",
+          "type": "Any"
+        }
+      ],
+      "returns": "None",
+      "decorators": [],
+      "complexity": 2,
+      "docstring": "",
+      "calls": [
+        "extract_file_symbols",
+        "assertEqual",
+        "assertTrue",
+        "assertGreaterEqual",
+        "dirname",
+        "len"
+      ],
+      "source": "    def test_ast_extractor(self):\n        data = extract_file_symbols(self.temp_file.name, os.path.dirname(self.temp_file.name))\n        self.assertEqual(data[\"docstring\"], \"Sample Module Docstring.\")\n        self.assertEqual(len(data[\"classes\"]), 1)\n        self.assertEqual(data[\"classes\"][0][\"name\"], \"EngineCore\")\n        self.assertEqual(len(data[\"classes\"][0][\"methods\"]), 2)\n\n        exec_method = [m for m in data[\"classes\"][0][\"methods\"] if m[\"name\"] == \"execute\"][0]\n        self.assertTrue(exec_method[\"is_async\"])\n        self.assertGreaterEqual(exec_method[\"complexity\"], 3)\n        self.assertEqual(exec_method[\"returns\"], \"bool\")\n\n        self.assertEqual(len(data[\"functions\"]), 1)\n        self.assertEqual(data[\"functions\"][0][\"name\"], \"standalone_helper\")\n        self.assertEqual(data[\"functions\"][0][\"returns\"], \"int\")",
+      "callers": []
+    },
+    "test_docgen.py:TestDynamicDocGen.test_merkle_cache": {
+      "name": "test_merkle_cache",
+      "full_name": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+      "parent_class": "TestDynamicDocGen",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 73,
+      "end_line": 92,
+      "is_async": false,
+      "signature": "def test_merkle_cache(self) -> None",
+      "args": [
+        {
+          "name": "self",
+          "type": "Any"
+        }
+      ],
+      "returns": "None",
+      "decorators": [],
+      "complexity": 3,
+      "docstring": "",
+      "calls": [
+        "join",
+        "exists",
+        "MerkleASTCache",
+        "getmtime",
+        "assertFalse",
+        "update",
+        "save",
+        "assertTrue",
+        "assertEqual",
+        "gettempdir",
+        "remove",
+        "is_cached",
+        "get_cached_symbols"
+      ],
+      "source": "    def test_merkle_cache(self):\n        cache_path = os.path.join(tempfile.gettempdir(), \".test_docgen_cache.json\")\n        if os.path.exists(cache_path):\n            os.remove(cache_path)\n\n        cache = MerkleASTCache(cache_file=cache_path)\n        mtime = os.path.getmtime(self.temp_file.name)\n        data = {\"dummy\": \"data\"}\n\n        self.assertFalse(cache.is_cached(\"test.py\", mtime))\n        cache.update(\"test.py\", mtime, data)\n        cache.save()\n\n        # Reload\n        cache2 = MerkleASTCache(cache_file=cache_path)\n        self.assertTrue(cache2.is_cached(\"test.py\", mtime))\n        self.assertEqual(cache2.get_cached_symbols(\"test.py\"), data)\n\n        if os.path.exists(cache_path):\n            os.remove(cache_path)",
+      "callers": []
+    },
+    "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end": {
+      "name": "test_compiler_end_to_end",
+      "full_name": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+      "parent_class": "TestDynamicDocGen",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 94,
+      "end_line": 107,
+      "is_async": false,
+      "signature": "def test_compiler_end_to_end(self) -> None",
+      "args": [
+        {
+          "name": "self",
+          "type": "Any"
+        }
+      ],
+      "returns": "None",
+      "decorators": [],
+      "complexity": 1,
+      "docstring": "",
+      "calls": [
+        "DocGenCompiler",
+        "compile",
+        "assertIn",
+        "assertGreater",
+        "len"
+      ],
+      "source": "    def test_compiler_end_to_end(self):\n        compiler = DocGenCompiler(root_dir=SCRIPT_DIR)\n        manifest = compiler.compile()\n\n        self.assertIn(\"project\", manifest)\n        self.assertIn(\"symbols\", manifest)\n        self.assertIn(\"graph\", manifest)\n        self.assertIn(\"search_index\", manifest)\n\n        stats = manifest[\"project\"][\"stats\"]\n        self.assertGreater(stats[\"total_files\"], 0)\n        self.assertGreater(stats[\"total_loc\"], 0)\n        self.assertGreater(len(manifest[\"graph\"][\"nodes\"]), 0)\n        self.assertGreater(len(manifest[\"graph\"][\"edges\"]), 0)",
       "callers": []
     },
     "module:examples/agent_llm_harness_example.py": {
@@ -11630,6 +12118,7 @@
           ],
           "source": "    def save(self):\n        try:\n            tmp = f\"{self.cache_file}.tmp\"\n            with open(tmp, \"w\", encoding=\"utf-8\") as f:\n                json.dump(self.entries, f, indent=2)\n            os.replace(tmp, self.cache_file)\n        except Exception:\n            pass",
           "callers": [
+            "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
             "docgen/compiler.py:DocGenCompiler.compile"
           ]
         },
@@ -11702,6 +12191,7 @@
           ],
           "source": "    def is_cached(self, file_path: str, mtime: float) -> bool:\n        if file_path not in self.entries:\n            return False\n        entry = self.entries[file_path]\n        if entry.get(\"mtime\") == mtime:\n            return True\n        # If mtime differs, check hash\n        current_hash = self.compute_file_hash(file_path)\n        return entry.get(\"hash\") == current_hash",
           "callers": [
+            "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
             "docgen/compiler.py:DocGenCompiler.compile"
           ]
         },
@@ -11734,6 +12224,7 @@
           ],
           "source": "    def get_cached_symbols(self, file_path: str) -> Optional[Dict[str, Any]]:\n        if file_path in self.entries:\n            return self.entries[file_path].get(\"data\")\n        return None",
           "callers": [
+            "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
             "docgen/compiler.py:DocGenCompiler.compile"
           ]
         },
@@ -11774,6 +12265,7 @@
           ],
           "source": "    def update(self, file_path: str, mtime: float, data: Dict[str, Any]):\n        file_hash = self.compute_file_hash(file_path)\n        self.entries[file_path] = {\n            \"mtime\": mtime,\n            \"hash\": file_hash,\n            \"data\": data\n        }",
           "callers": [
+            "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
             "omniswarm_py/mesh_config.py:load_mesh_config",
             "docgen/merkle.py:MerkleASTCache.compute_file_hash",
             "docgen/compiler.py:DocGenCompiler.compile"
@@ -11812,6 +12304,7 @@
       ],
       "source": "class MerkleASTCache:\n    def __init__(self, cache_file: str = \".docgen_cache.json\"):\n        self.cache_file = cache_file\n        self.entries: Dict[str, Dict[str, Any]] = {}\n        self.load()\n\n    def load(self):\n        if os.path.exists(self.cache_file):\n            try:\n                with open(self.cache_file, \"r\", encoding=\"utf-8\") as f:\n                    self.entries = json.load(f)\n            except Exception:\n                self.entries = {}\n        else:\n            self.entries = {}\n\n    def save(self):\n        try:\n            tmp = f\"{self.cache_file}.tmp\"\n            with open(tmp, \"w\", encoding=\"utf-8\") as f:\n                json.dump(self.entries, f, indent=2)\n            os.replace(tmp, self.cache_file)\n        except Exception:\n            pass\n\n    @staticmethod\n    def compute_file_hash(path: str) -> str:\n        hasher = hashlib.blake2b(digest_size=16)\n        try:\n            with open(path, \"rb\") as f:\n                while chunk := f.read(65536):\n                    hasher.update(chunk)\n            return hasher.hexdigest()\n        except Exception:\n            return \"\"\n\n    def is_cached(self, file_path: str, mtime: float) -> bool:\n        if file_path not in self.entries:\n            return False\n        entry = self.entries[file_path]\n        if entry.get(\"mtime\") == mtime:\n            return True\n        # If mtime differs, check hash\n        current_hash = self.compute_file_hash(file_path)\n        return entry.get(\"hash\") == current_hash\n\n    def get_cached_symbols(self, file_path: str) -> Optional[Dict[str, Any]]:\n        if file_path in self.entries:\n            return self.entries[file_path].get(\"data\")\n        return None\n\n    def update(self, file_path: str, mtime: float, data: Dict[str, Any]):\n        file_hash = self.compute_file_hash(file_path)\n        self.entries[file_path] = {\n            \"mtime\": mtime,\n            \"hash\": file_hash,\n            \"data\": data\n        }\n\n    def prune_stale(self, existing_files: set):\n        to_delete = [p for p in self.entries if p not in existing_files]\n        for p in to_delete:\n            del self.entries[p]",
       "callers": [
+        "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
         "docgen/compiler.py:DocGenCompiler.__init__"
       ]
     },
@@ -11911,6 +12404,7 @@
       ],
       "source": "    def save(self):\n        try:\n            tmp = f\"{self.cache_file}.tmp\"\n            with open(tmp, \"w\", encoding=\"utf-8\") as f:\n                json.dump(self.entries, f, indent=2)\n            os.replace(tmp, self.cache_file)\n        except Exception:\n            pass",
       "callers": [
+        "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
         "docgen/compiler.py:DocGenCompiler.compile"
       ]
     },
@@ -11983,6 +12477,7 @@
       ],
       "source": "    def is_cached(self, file_path: str, mtime: float) -> bool:\n        if file_path not in self.entries:\n            return False\n        entry = self.entries[file_path]\n        if entry.get(\"mtime\") == mtime:\n            return True\n        # If mtime differs, check hash\n        current_hash = self.compute_file_hash(file_path)\n        return entry.get(\"hash\") == current_hash",
       "callers": [
+        "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
         "docgen/compiler.py:DocGenCompiler.compile"
       ]
     },
@@ -12015,6 +12510,7 @@
       ],
       "source": "    def get_cached_symbols(self, file_path: str) -> Optional[Dict[str, Any]]:\n        if file_path in self.entries:\n            return self.entries[file_path].get(\"data\")\n        return None",
       "callers": [
+        "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
         "docgen/compiler.py:DocGenCompiler.compile"
       ]
     },
@@ -12055,6 +12551,7 @@
       ],
       "source": "    def update(self, file_path: str, mtime: float, data: Dict[str, Any]):\n        file_hash = self.compute_file_hash(file_path)\n        self.entries[file_path] = {\n            \"mtime\": mtime,\n            \"hash\": file_hash,\n            \"data\": data\n        }",
       "callers": [
+        "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
         "omniswarm_py/mesh_config.py:load_mesh_config",
         "docgen/merkle.py:MerkleASTCache.compute_file_hash",
         "docgen/compiler.py:DocGenCompiler.compile"
@@ -12764,6 +13261,7 @@
       ],
       "source": "def extract_file_symbols(abs_path: str, root_dir: str) -> Dict[str, Any]:\n    \"\"\"Analyzes a source file and returns its structural symbol metadata.\"\"\"\n    rel_path = os.path.relpath(abs_path, root_dir).replace(\"\\\\\", \"/\")\n    try:\n        with open(abs_path, \"r\", encoding=\"utf-8\", errors=\"replace\") as f:\n            code = f.read()\n    except Exception as e:\n        return {\"file\": rel_path, \"error\": str(e), \"classes\": [], \"functions\": [], \"imports\": []}\n\n    if abs_path.endswith(\".py\"):\n        extractor = PythonASTExtractor(abs_path, code, rel_path)\n        return extractor.extract()\n    elif abs_path.endswith((\".js\", \".jsx\", \".ts\", \".tsx\")):\n        extractor = JSTSExtractor(abs_path, code, rel_path)\n        return extractor.extract()\n    else:\n        return {\"file\": rel_path, \"classes\": [], \"functions\": [], \"imports\": []}",
       "callers": [
+        "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
         "docgen/compiler.py:DocGenCompiler.compile"
       ]
     },
@@ -12944,13 +13442,15 @@
           "source": "    def compile(self) -> Dict[str, Any]:\n        \"\"\"Executes full incremental compilation of the codebase documentation.\"\"\"\n        start_time = time.time()\n        files = self.discover_files()\n        existing_rel_files = set()\n\n        all_file_data = []\n        stats = {\n            \"total_files\": len(files),\n            \"total_loc\": 0,\n            \"total_classes\": 0,\n            \"total_functions\": 0,\n            \"avg_complexity\": 0.0,\n            \"complexities\": []\n        }\n\n        # 1. Parse or load from Merkle cache\n        for fpath in files:\n            rel_path = os.path.relpath(fpath, self.root_dir).replace(\"\\\\\", \"/\")\n            existing_rel_files.add(rel_path)\n            mtime = os.path.getmtime(fpath)\n\n            if self.cache.is_cached(rel_path, mtime):\n                data = self.cache.get_cached_symbols(rel_path)\n            else:\n                data = extract_file_symbols(fpath, self.root_dir)\n                self.cache.update(rel_path, mtime, data)\n\n            if data:\n                all_file_data.append(data)\n                stats[\"total_loc\"] += data.get(\"loc\", 0)\n                stats[\"total_classes\"] += len(data.get(\"classes\", []))\n                stats[\"total_functions\"] += len(data.get(\"functions\", []))\n                for c in data.get(\"classes\", []):\n                    stats[\"total_functions\"] += len(c.get(\"methods\", []))\n                    for m in c.get(\"methods\", []):\n                        stats[\"complexities\"].append(m.get(\"complexity\", 1))\n                for fn in data.get(\"functions\", []):\n                    stats[\"complexities\"].append(fn.get(\"complexity\", 1))\n\n        # Save updated cache\n        self.cache.prune_stale(existing_rel_files)\n        self.cache.save()\n\n        if stats[\"complexities\"]:\n            stats[\"avg_complexity\"] = round(sum(stats[\"complexities\"]) / len(stats[\"complexities\"]), 2)\n        del stats[\"complexities\"]\n\n        # 2. Build Unified Symbol Dictionary\n        symbols: Dict[str, Any] = {}\n        # Quick lookup for symbol resolution: name -> [full_names]\n        name_to_ids: Dict[str, List[str]] = {}\n\n        for f in all_file_data:\n            # File node\n            f_id = f\"module:{f['file']}\"\n            symbols[f_id] = {\n                \"id\": f_id,\n                \"name\": f[\"file\"],\n                \"type\": \"module\",\n                \"file\": f[\"file\"],\n                \"docstring\": f.get(\"docstring\", \"\"),\n                \"loc\": f.get(\"loc\", 0),\n                \"imports\": f.get(\"imports\", [])\n            }\n\n            for c in f.get(\"classes\", []):\n                cid = c[\"full_name\"]\n                symbols[cid] = c\n                name_to_ids.setdefault(c[\"name\"], []).append(cid)\n                for m in c.get(\"methods\", []):\n                    mid = m[\"full_name\"]\n                    symbols[mid] = m\n                    name_to_ids.setdefault(m[\"name\"], []).append(mid)\n\n            for fn in f.get(\"functions\", []):\n                fn_id = fn[\"full_name\"]\n                symbols[fn_id] = fn\n                name_to_ids.setdefault(fn[\"name\"], []).append(fn_id)\n\n        # 3. Resolve Call Graph & Build Graph (Nodes + Edges)\n        nodes: List[Dict[str, Any]] = []\n        edges: List[Dict[str, Any]] = []\n\n        for sid, sym in symbols.items():\n            nodes.append({\n                \"id\": sid,\n                \"name\": sym[\"name\"],\n                \"type\": sym[\"type\"],\n                \"file\": sym[\"file\"],\n                \"line\": sym.get(\"line\", 1)\n            })\n\n            # Containment edges\n            if sym[\"type\"] in [\"class\", \"function\"]:\n                edges.append({\n                    \"source\": f\"module:{sym['file']}\",\n                    \"target\": sid,\n                    \"relation\": \"contains\"\n                })\n            elif sym[\"type\"] == \"method\" and sym.get(\"parent_class\"):\n                edges.append({\n                    \"source\": f\"{sym['file']}:{sym['parent_class']}\",\n                    \"target\": sid,\n                    \"relation\": \"contains\"\n                })\n\n            # Inheritance edges\n            if sym[\"type\"] == \"class\":\n                for base in sym.get(\"bases\", []):\n                    if base in name_to_ids:\n                        for target_id in name_to_ids[base]:\n                            edges.append({\n                                \"source\": sid,\n                                \"target\": target_id,\n                                \"relation\": \"inherits\"\n                            })\n\n            # Call edges\n            calls = sym.get(\"calls\", [])\n            sym[\"callers\"] = []  # populate reverse callers\n            for called_name in calls:\n                if called_name in name_to_ids:\n                    for target_id in name_to_ids[called_name]:\n                        edges.append({\n                            \"source\": sid,\n                            \"target\": target_id,\n                            \"relation\": \"calls\"\n                        })\n\n        # Reverse caller population\n        for edge in edges:\n            if edge[\"relation\"] == \"calls\":\n                target = edge[\"target\"]\n                source = edge[\"source\"]\n                if target in symbols:\n                    if \"callers\" not in symbols[target]:\n                        symbols[target][\"callers\"] = []\n                    if source not in symbols[target][\"callers\"]:\n                        symbols[target][\"callers\"].append(source)\n\n        # 4. Generate Inverted Search Index\n        search_index = []\n        for sid, sym in symbols.items():\n            search_index.append({\n                \"id\": sid,\n                \"name\": sym[\"name\"],\n                \"type\": sym[\"type\"],\n                \"file\": sym[\"file\"],\n                \"line\": sym.get(\"line\", 1),\n                \"doc\": sym.get(\"docstring\", \"\")[:120],\n                \"sig\": sym.get(\"signature\", \"\")\n            })\n\n        project_name = os.path.basename(self.root_dir)\n        elapsed = round(time.time() - start_time, 3)\n\n        manifest = {\n            \"project\": {\n                \"name\": project_name,\n                \"root\": self.root_dir,\n                \"compiled_at\": time.strftime(\"%Y-%m-%d %H:%M:%S\"),\n                \"build_duration_sec\": elapsed,\n                \"stats\": stats\n            },\n            \"symbols\": symbols,\n            \"graph\": {\n                \"nodes\": nodes,\n                \"edges\": edges\n            },\n            \"search_index\": search_index\n        }\n\n        return manifest",
           "callers": [
             "docgen_cli.py:run_build",
+            "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
             "docgen/extractor.py:JSTSExtractor.extract"
           ]
         }
       ],
       "source": "class DocGenCompiler:\n    def __init__(self, root_dir: str, cache_file: str = \".docgen_cache.json\"):\n        self.root_dir = os.path.abspath(root_dir)\n        self.cache = MerkleASTCache(cache_file=os.path.join(self.root_dir, cache_file))\n\n    def discover_files(self) -> List[str]:\n        \"\"\"Finds all parsable source files in the target directory.\"\"\"\n        found = []\n        for root, dirs, files in os.walk(self.root_dir):\n            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith(\".\")]\n            for file in files:\n                ext = os.path.splitext(file)[1]\n                if ext in VALID_EXTENSIONS:\n                    found.append(os.path.join(root, file))\n        return found\n\n    def compile(self) -> Dict[str, Any]:\n        \"\"\"Executes full incremental compilation of the codebase documentation.\"\"\"\n        start_time = time.time()\n        files = self.discover_files()\n        existing_rel_files = set()\n\n        all_file_data = []\n        stats = {\n            \"total_files\": len(files),\n            \"total_loc\": 0,\n            \"total_classes\": 0,\n            \"total_functions\": 0,\n            \"avg_complexity\": 0.0,\n            \"complexities\": []\n        }\n\n        # 1. Parse or load from Merkle cache\n        for fpath in files:\n            rel_path = os.path.relpath(fpath, self.root_dir).replace(\"\\\\\", \"/\")\n            existing_rel_files.add(rel_path)\n            mtime = os.path.getmtime(fpath)\n\n            if self.cache.is_cached(rel_path, mtime):\n                data = self.cache.get_cached_symbols(rel_path)\n            else:\n                data = extract_file_symbols(fpath, self.root_dir)\n                self.cache.update(rel_path, mtime, data)\n\n            if data:\n                all_file_data.append(data)\n                stats[\"total_loc\"] += data.get(\"loc\", 0)\n                stats[\"total_classes\"] += len(data.get(\"classes\", []))\n                stats[\"total_functions\"] += len(data.get(\"functions\", []))\n                for c in data.get(\"classes\", []):\n                    stats[\"total_functions\"] += len(c.get(\"methods\", []))\n                    for m in c.get(\"methods\", []):\n                        stats[\"complexities\"].append(m.get(\"complexity\", 1))\n                for fn in data.get(\"functions\", []):\n                    stats[\"complexities\"].append(fn.get(\"complexity\", 1))\n\n        # Save updated cache\n        self.cache.prune_stale(existing_rel_files)\n        self.cache.save()\n\n        if stats[\"complexities\"]:\n            stats[\"avg_complexity\"] = round(sum(stats[\"complexities\"]) / len(stats[\"complexities\"]), 2)\n        del stats[\"complexities\"]\n\n        # 2. Build Unified Symbol Dictionary\n        symbols: Dict[str, Any] = {}\n        # Quick lookup for symbol resolution: name -> [full_names]\n        name_to_ids: Dict[str, List[str]] = {}\n\n        for f in all_file_data:\n            # File node\n            f_id = f\"module:{f['file']}\"\n            symbols[f_id] = {\n                \"id\": f_id,\n                \"name\": f[\"file\"],\n                \"type\": \"module\",\n                \"file\": f[\"file\"],\n                \"docstring\": f.get(\"docstring\", \"\"),\n                \"loc\": f.get(\"loc\", 0),\n                \"imports\": f.get(\"imports\", [])\n            }\n\n            for c in f.get(\"classes\", []):\n                cid = c[\"full_name\"]\n                symbols[cid] = c\n                name_to_ids.setdefault(c[\"name\"], []).append(cid)\n                for m in c.get(\"methods\", []):\n                    mid = m[\"full_name\"]\n                    symbols[mid] = m\n                    name_to_ids.setdefault(m[\"name\"], []).append(mid)\n\n            for fn in f.get(\"functions\", []):\n                fn_id = fn[\"full_name\"]\n                symbols[fn_id] = fn\n                name_to_ids.setdefault(fn[\"name\"], []).append(fn_id)\n\n        # 3. Resolve Call Graph & Build Graph (Nodes + Edges)\n        nodes: List[Dict[str, Any]] = []\n        edges: List[Dict[str, Any]] = []\n\n        for sid, sym in symbols.items():\n            nodes.append({\n                \"id\": sid,\n                \"name\": sym[\"name\"],\n                \"type\": sym[\"type\"],\n                \"file\": sym[\"file\"],\n                \"line\": sym.get(\"line\", 1)\n            })\n\n            # Containment edges\n            if sym[\"type\"] in [\"class\", \"function\"]:\n                edges.append({\n                    \"source\": f\"module:{sym['file']}\",\n                    \"target\": sid,\n                    \"relation\": \"contains\"\n                })\n            elif sym[\"type\"] == \"method\" and sym.get(\"parent_class\"):\n                edges.append({\n                    \"source\": f\"{sym['file']}:{sym['parent_class']}\",\n                    \"target\": sid,\n                    \"relation\": \"contains\"\n                })\n\n            # Inheritance edges\n            if sym[\"type\"] == \"class\":\n                for base in sym.get(\"bases\", []):\n                    if base in name_to_ids:\n                        for target_id in name_to_ids[base]:\n                            edges.append({\n                                \"source\": sid,\n                                \"target\": target_id,\n                                \"relation\": \"inherits\"\n                            })\n\n            # Call edges\n            calls = sym.get(\"calls\", [])\n            sym[\"callers\"] = []  # populate reverse callers\n            for called_name in calls:\n                if called_name in name_to_ids:\n                    for target_id in name_to_ids[called_name]:\n                        edges.append({\n                            \"source\": sid,\n                            \"target\": target_id,\n                            \"relation\": \"calls\"\n                        })\n\n        # Reverse caller population\n        for edge in edges:\n            if edge[\"relation\"] == \"calls\":\n                target = edge[\"target\"]\n                source = edge[\"source\"]\n                if target in symbols:\n                    if \"callers\" not in symbols[target]:\n                        symbols[target][\"callers\"] = []\n                    if source not in symbols[target][\"callers\"]:\n                        symbols[target][\"callers\"].append(source)\n\n        # 4. Generate Inverted Search Index\n        search_index = []\n        for sid, sym in symbols.items():\n            search_index.append({\n                \"id\": sid,\n                \"name\": sym[\"name\"],\n                \"type\": sym[\"type\"],\n                \"file\": sym[\"file\"],\n                \"line\": sym.get(\"line\", 1),\n                \"doc\": sym.get(\"docstring\", \"\")[:120],\n                \"sig\": sym.get(\"signature\", \"\")\n            })\n\n        project_name = os.path.basename(self.root_dir)\n        elapsed = round(time.time() - start_time, 3)\n\n        manifest = {\n            \"project\": {\n                \"name\": project_name,\n                \"root\": self.root_dir,\n                \"compiled_at\": time.strftime(\"%Y-%m-%d %H:%M:%S\"),\n                \"build_duration_sec\": elapsed,\n                \"stats\": stats\n            },\n            \"symbols\": symbols,\n            \"graph\": {\n                \"nodes\": nodes,\n                \"edges\": edges\n            },\n            \"search_index\": search_index\n        }\n\n        return manifest",
       "callers": [
-        "docgen_cli.py:run_build"
+        "docgen_cli.py:run_build",
+        "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end"
       ]
     },
     "docgen/compiler.py:DocGenCompiler.__init__": {
@@ -13068,6 +13568,7 @@
       "source": "    def compile(self) -> Dict[str, Any]:\n        \"\"\"Executes full incremental compilation of the codebase documentation.\"\"\"\n        start_time = time.time()\n        files = self.discover_files()\n        existing_rel_files = set()\n\n        all_file_data = []\n        stats = {\n            \"total_files\": len(files),\n            \"total_loc\": 0,\n            \"total_classes\": 0,\n            \"total_functions\": 0,\n            \"avg_complexity\": 0.0,\n            \"complexities\": []\n        }\n\n        # 1. Parse or load from Merkle cache\n        for fpath in files:\n            rel_path = os.path.relpath(fpath, self.root_dir).replace(\"\\\\\", \"/\")\n            existing_rel_files.add(rel_path)\n            mtime = os.path.getmtime(fpath)\n\n            if self.cache.is_cached(rel_path, mtime):\n                data = self.cache.get_cached_symbols(rel_path)\n            else:\n                data = extract_file_symbols(fpath, self.root_dir)\n                self.cache.update(rel_path, mtime, data)\n\n            if data:\n                all_file_data.append(data)\n                stats[\"total_loc\"] += data.get(\"loc\", 0)\n                stats[\"total_classes\"] += len(data.get(\"classes\", []))\n                stats[\"total_functions\"] += len(data.get(\"functions\", []))\n                for c in data.get(\"classes\", []):\n                    stats[\"total_functions\"] += len(c.get(\"methods\", []))\n                    for m in c.get(\"methods\", []):\n                        stats[\"complexities\"].append(m.get(\"complexity\", 1))\n                for fn in data.get(\"functions\", []):\n                    stats[\"complexities\"].append(fn.get(\"complexity\", 1))\n\n        # Save updated cache\n        self.cache.prune_stale(existing_rel_files)\n        self.cache.save()\n\n        if stats[\"complexities\"]:\n            stats[\"avg_complexity\"] = round(sum(stats[\"complexities\"]) / len(stats[\"complexities\"]), 2)\n        del stats[\"complexities\"]\n\n        # 2. Build Unified Symbol Dictionary\n        symbols: Dict[str, Any] = {}\n        # Quick lookup for symbol resolution: name -> [full_names]\n        name_to_ids: Dict[str, List[str]] = {}\n\n        for f in all_file_data:\n            # File node\n            f_id = f\"module:{f['file']}\"\n            symbols[f_id] = {\n                \"id\": f_id,\n                \"name\": f[\"file\"],\n                \"type\": \"module\",\n                \"file\": f[\"file\"],\n                \"docstring\": f.get(\"docstring\", \"\"),\n                \"loc\": f.get(\"loc\", 0),\n                \"imports\": f.get(\"imports\", [])\n            }\n\n            for c in f.get(\"classes\", []):\n                cid = c[\"full_name\"]\n                symbols[cid] = c\n                name_to_ids.setdefault(c[\"name\"], []).append(cid)\n                for m in c.get(\"methods\", []):\n                    mid = m[\"full_name\"]\n                    symbols[mid] = m\n                    name_to_ids.setdefault(m[\"name\"], []).append(mid)\n\n            for fn in f.get(\"functions\", []):\n                fn_id = fn[\"full_name\"]\n                symbols[fn_id] = fn\n                name_to_ids.setdefault(fn[\"name\"], []).append(fn_id)\n\n        # 3. Resolve Call Graph & Build Graph (Nodes + Edges)\n        nodes: List[Dict[str, Any]] = []\n        edges: List[Dict[str, Any]] = []\n\n        for sid, sym in symbols.items():\n            nodes.append({\n                \"id\": sid,\n                \"name\": sym[\"name\"],\n                \"type\": sym[\"type\"],\n                \"file\": sym[\"file\"],\n                \"line\": sym.get(\"line\", 1)\n            })\n\n            # Containment edges\n            if sym[\"type\"] in [\"class\", \"function\"]:\n                edges.append({\n                    \"source\": f\"module:{sym['file']}\",\n                    \"target\": sid,\n                    \"relation\": \"contains\"\n                })\n            elif sym[\"type\"] == \"method\" and sym.get(\"parent_class\"):\n                edges.append({\n                    \"source\": f\"{sym['file']}:{sym['parent_class']}\",\n                    \"target\": sid,\n                    \"relation\": \"contains\"\n                })\n\n            # Inheritance edges\n            if sym[\"type\"] == \"class\":\n                for base in sym.get(\"bases\", []):\n                    if base in name_to_ids:\n                        for target_id in name_to_ids[base]:\n                            edges.append({\n                                \"source\": sid,\n                                \"target\": target_id,\n                                \"relation\": \"inherits\"\n                            })\n\n            # Call edges\n            calls = sym.get(\"calls\", [])\n            sym[\"callers\"] = []  # populate reverse callers\n            for called_name in calls:\n                if called_name in name_to_ids:\n                    for target_id in name_to_ids[called_name]:\n                        edges.append({\n                            \"source\": sid,\n                            \"target\": target_id,\n                            \"relation\": \"calls\"\n                        })\n\n        # Reverse caller population\n        for edge in edges:\n            if edge[\"relation\"] == \"calls\":\n                target = edge[\"target\"]\n                source = edge[\"source\"]\n                if target in symbols:\n                    if \"callers\" not in symbols[target]:\n                        symbols[target][\"callers\"] = []\n                    if source not in symbols[target][\"callers\"]:\n                        symbols[target][\"callers\"].append(source)\n\n        # 4. Generate Inverted Search Index\n        search_index = []\n        for sid, sym in symbols.items():\n            search_index.append({\n                \"id\": sid,\n                \"name\": sym[\"name\"],\n                \"type\": sym[\"type\"],\n                \"file\": sym[\"file\"],\n                \"line\": sym.get(\"line\", 1),\n                \"doc\": sym.get(\"docstring\", \"\")[:120],\n                \"sig\": sym.get(\"signature\", \"\")\n            })\n\n        project_name = os.path.basename(self.root_dir)\n        elapsed = round(time.time() - start_time, 3)\n\n        manifest = {\n            \"project\": {\n                \"name\": project_name,\n                \"root\": self.root_dir,\n                \"compiled_at\": time.strftime(\"%Y-%m-%d %H:%M:%S\"),\n                \"build_duration_sec\": elapsed,\n                \"stats\": stats\n            },\n            \"symbols\": symbols,\n            \"graph\": {\n                \"nodes\": nodes,\n                \"edges\": edges\n            },\n            \"search_index\": search_index\n        }\n\n        return manifest",
       "callers": [
         "docgen_cli.py:run_build",
+        "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
         "docgen/extractor.py:JSTSExtractor.extract"
       ]
     },
@@ -13126,7 +13627,7 @@
       "type": "module",
       "file": "docgen/ui/src/App.jsx",
       "docstring": "",
-      "loc": 160,
+      "loc": 166,
       "imports": [
         {
           "module": "./components/Header",
@@ -13224,7 +13725,7 @@
       "type": "module",
       "file": "docgen/ui/src/components/Header.jsx",
       "docstring": "",
-      "loc": 121,
+      "loc": 150,
       "imports": [
         {
           "module": "react",
@@ -13242,7 +13743,7 @@
       "file": "docgen/ui/src/components/Header.jsx",
       "line": 3,
       "is_async": false,
-      "signature": "function Header({ project, activeTab, setActiveTab, onOpenSearch })",
+      "signature": "function Header({ project, activeTab, setActiveTab, onOpenSearch, onToggleSidebar, isSidebarOpen })",
       "args": [
         {
           "name": "{ project",
@@ -13257,7 +13758,15 @@
           "type": "any"
         },
         {
-          "name": "onOpenSearch }",
+          "name": "onOpenSearch",
+          "type": "any"
+        },
+        {
+          "name": "onToggleSidebar",
+          "type": "any"
+        },
+        {
+          "name": "isSidebarOpen }",
           "type": "any"
         }
       ],
@@ -13265,7 +13774,7 @@
       "complexity": 1,
       "docstring": "",
       "calls": [],
-      "source": "function Header({ project, activeTab, setActiveTab, onOpenSearch })",
+      "source": "function Header({ project, activeTab, setActiveTab, onOpenSearch, onToggleSidebar, isSidebarOpen })",
       "callers": []
     },
     "module:docgen/ui/src/components/Sidebar.jsx": {
@@ -13274,7 +13783,7 @@
       "type": "module",
       "file": "docgen/ui/src/components/Sidebar.jsx",
       "docstring": "",
-      "loc": 139,
+      "loc": 187,
       "imports": [],
       "callers": []
     },
@@ -13285,7 +13794,7 @@
       "file": "docgen/ui/src/components/Sidebar.jsx",
       "line": 3,
       "is_async": false,
-      "signature": "function Sidebar({ symbols, activeSymbolId, onSelectSymbol })",
+      "signature": "function Sidebar({ symbols, activeSymbolId, onSelectSymbol, isOpen, onClose })",
       "args": [
         {
           "name": "{ symbols",
@@ -13296,7 +13805,15 @@
           "type": "any"
         },
         {
-          "name": "onSelectSymbol }",
+          "name": "onSelectSymbol",
+          "type": "any"
+        },
+        {
+          "name": "isOpen",
+          "type": "any"
+        },
+        {
+          "name": "onClose }",
           "type": "any"
         }
       ],
@@ -13304,7 +13821,7 @@
       "complexity": 1,
       "docstring": "",
       "calls": [],
-      "source": "function Sidebar({ symbols, activeSymbolId, onSelectSymbol })",
+      "source": "function Sidebar({ symbols, activeSymbolId, onSelectSymbol, isOpen, onClose })",
       "callers": []
     },
     "module:docgen/ui/src/components/SearchModal.jsx": {
@@ -13356,7 +13873,7 @@
       "type": "module",
       "file": "docgen/ui/src/components/SymbolView.jsx",
       "docstring": "",
-      "loc": 278,
+      "loc": 295,
       "imports": [],
       "callers": []
     },
@@ -13426,7 +13943,7 @@
       "type": "module",
       "file": "docgen/ui/src/components/CodeRunner.jsx",
       "docstring": "",
-      "loc": 167,
+      "loc": 177,
       "imports": [],
       "callers": []
     },
@@ -13457,7 +13974,7 @@
       "type": "module",
       "file": "docgen/ui/src/components/Overview.jsx",
       "docstring": "",
-      "loc": 181,
+      "loc": 176,
       "imports": [
         {
           "module": "react",
@@ -13869,32 +14386,95 @@
         "line": 1
       },
       {
+        "id": "docgen_cli.py:DynamicDocGenHTTPHandler",
+        "name": "DynamicDocGenHTTPHandler",
+        "type": "class",
+        "file": "docgen_cli.py",
+        "line": 92
+      },
+      {
+        "id": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+        "name": "do_GET",
+        "type": "method",
+        "file": "docgen_cli.py",
+        "line": 99
+      },
+      {
         "id": "docgen_cli.py:run_build",
         "name": "run_build",
         "type": "function",
         "file": "docgen_cli.py",
-        "line": 32
+        "line": 34
       },
       {
         "id": "docgen_cli.py:run_serve",
         "name": "run_serve",
         "type": "function",
         "file": "docgen_cli.py",
-        "line": 69
+        "line": 112
       },
       {
         "id": "docgen_cli.py:run_watch",
         "name": "run_watch",
         "type": "function",
         "file": "docgen_cli.py",
-        "line": 91
+        "line": 156
       },
       {
         "id": "docgen_cli.py:main",
         "name": "main",
         "type": "function",
         "file": "docgen_cli.py",
-        "line": 123
+        "line": 187
+      },
+      {
+        "id": "module:test_docgen.py",
+        "name": "test_docgen.py",
+        "type": "module",
+        "file": "test_docgen.py",
+        "line": 1
+      },
+      {
+        "id": "test_docgen.py:TestDynamicDocGen",
+        "name": "TestDynamicDocGen",
+        "type": "class",
+        "file": "test_docgen.py",
+        "line": 19
+      },
+      {
+        "id": "test_docgen.py:TestDynamicDocGen.setUp",
+        "name": "setUp",
+        "type": "method",
+        "file": "test_docgen.py",
+        "line": 21
+      },
+      {
+        "id": "test_docgen.py:TestDynamicDocGen.tearDown",
+        "name": "tearDown",
+        "type": "method",
+        "file": "test_docgen.py",
+        "line": 53
+      },
+      {
+        "id": "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
+        "name": "test_ast_extractor",
+        "type": "method",
+        "file": "test_docgen.py",
+        "line": 57
+      },
+      {
+        "id": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "name": "test_merkle_cache",
+        "type": "method",
+        "file": "test_docgen.py",
+        "line": 73
+      },
+      {
+        "id": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+        "name": "test_compiler_end_to_end",
+        "type": "method",
+        "file": "test_docgen.py",
+        "line": 94
       },
       {
         "id": "module:examples/agent_llm_harness_example.py",
@@ -15946,6 +16526,21 @@
       },
       {
         "source": "module:docgen_cli.py",
+        "target": "docgen_cli.py:DynamicDocGenHTTPHandler",
+        "relation": "contains"
+      },
+      {
+        "source": "docgen_cli.py:DynamicDocGenHTTPHandler",
+        "target": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+        "relation": "contains"
+      },
+      {
+        "source": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+        "target": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+        "relation": "calls"
+      },
+      {
+        "source": "module:docgen_cli.py",
         "target": "docgen_cli.py:run_build",
         "relation": "contains"
       },
@@ -15992,6 +16587,76 @@
       {
         "source": "docgen_cli.py:main",
         "target": "docgen_cli.py:run_watch",
+        "relation": "calls"
+      },
+      {
+        "source": "module:test_docgen.py",
+        "target": "test_docgen.py:TestDynamicDocGen",
+        "relation": "contains"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen",
+        "target": "test_docgen.py:TestDynamicDocGen.setUp",
+        "relation": "contains"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen",
+        "target": "test_docgen.py:TestDynamicDocGen.tearDown",
+        "relation": "contains"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen",
+        "target": "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
+        "relation": "contains"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
+        "target": "docgen/extractor.py:extract_file_symbols",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen",
+        "target": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "relation": "contains"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "target": "docgen/merkle.py:MerkleASTCache",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "target": "docgen/merkle.py:MerkleASTCache.update",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "target": "docgen/merkle.py:MerkleASTCache.save",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "target": "docgen/merkle.py:MerkleASTCache.is_cached",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+        "target": "docgen/merkle.py:MerkleASTCache.get_cached_symbols",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen",
+        "target": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+        "relation": "contains"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+        "target": "docgen/compiler.py:DocGenCompiler",
+        "relation": "calls"
+      },
+      {
+        "source": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+        "target": "docgen/compiler.py:DocGenCompiler.compile",
         "relation": "calls"
       },
       {
@@ -18346,29 +19011,47 @@
       "sig": ""
     },
     {
+      "id": "docgen_cli.py:DynamicDocGenHTTPHandler",
+      "name": "DynamicDocGenHTTPHandler",
+      "type": "class",
+      "file": "docgen_cli.py",
+      "line": 92,
+      "doc": "Custom HTTP request handler that serves the DocGen UI while dynamically\nrouting /docs_manifest.json to the target projec",
+      "sig": ""
+    },
+    {
+      "id": "docgen_cli.py:DynamicDocGenHTTPHandler.do_GET",
+      "name": "do_GET",
+      "type": "method",
+      "file": "docgen_cli.py",
+      "line": 99,
+      "doc": "",
+      "sig": "def do_GET(self) -> None"
+    },
+    {
       "id": "docgen_cli.py:run_build",
       "name": "run_build",
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 32,
+      "line": 34,
       "doc": "",
-      "sig": "def run_build(target_dir: str, output_paths: Optional[list]) -> dict"
+      "sig": "def run_build(target_dir: str, output_paths: Optional[List[str]], bundle_ui: bool) -> dict"
     },
     {
       "id": "docgen_cli.py:run_serve",
       "name": "run_serve",
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 69,
+      "line": 112,
       "doc": "",
-      "sig": "def run_serve(dist_dir: str, port: int) -> None"
+      "sig": "def run_serve(target_or_dist: str, port: int) -> None"
     },
     {
       "id": "docgen_cli.py:run_watch",
       "name": "run_watch",
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 91,
+      "line": 156,
       "doc": "",
       "sig": "def run_watch(target_dir: str, interval: float) -> None"
     },
@@ -18377,9 +19060,72 @@
       "name": "main",
       "type": "function",
       "file": "docgen_cli.py",
-      "line": 123,
+      "line": 187,
       "doc": "",
       "sig": "def main() -> None"
+    },
+    {
+      "id": "module:test_docgen.py",
+      "name": "test_docgen.py",
+      "type": "module",
+      "file": "test_docgen.py",
+      "line": 1,
+      "doc": "Test Suite for Dynamic DocGen Engine\nValidates AST extractor, Merkle cache, graph compiler, and search indexing.",
+      "sig": ""
+    },
+    {
+      "id": "test_docgen.py:TestDynamicDocGen",
+      "name": "TestDynamicDocGen",
+      "type": "class",
+      "file": "test_docgen.py",
+      "line": 19,
+      "doc": "",
+      "sig": ""
+    },
+    {
+      "id": "test_docgen.py:TestDynamicDocGen.setUp",
+      "name": "setUp",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 21,
+      "doc": "",
+      "sig": "def setUp(self) -> None"
+    },
+    {
+      "id": "test_docgen.py:TestDynamicDocGen.tearDown",
+      "name": "tearDown",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 53,
+      "doc": "",
+      "sig": "def tearDown(self) -> None"
+    },
+    {
+      "id": "test_docgen.py:TestDynamicDocGen.test_ast_extractor",
+      "name": "test_ast_extractor",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 57,
+      "doc": "",
+      "sig": "def test_ast_extractor(self) -> None"
+    },
+    {
+      "id": "test_docgen.py:TestDynamicDocGen.test_merkle_cache",
+      "name": "test_merkle_cache",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 73,
+      "doc": "",
+      "sig": "def test_merkle_cache(self) -> None"
+    },
+    {
+      "id": "test_docgen.py:TestDynamicDocGen.test_compiler_end_to_end",
+      "name": "test_compiler_end_to_end",
+      "type": "method",
+      "file": "test_docgen.py",
+      "line": 94,
+      "doc": "",
+      "sig": "def test_compiler_end_to_end(self) -> None"
     },
     {
       "id": "module:examples/agent_llm_harness_example.py",
@@ -20143,7 +20889,7 @@
       "file": "docgen/ui/src/components/Header.jsx",
       "line": 3,
       "doc": "",
-      "sig": "function Header({ project, activeTab, setActiveTab, onOpenSearch })"
+      "sig": "function Header({ project, activeTab, setActiveTab, onOpenSearch, onToggleSidebar, isSidebarOpen })"
     },
     {
       "id": "module:docgen/ui/src/components/Sidebar.jsx",
@@ -20161,7 +20907,7 @@
       "file": "docgen/ui/src/components/Sidebar.jsx",
       "line": 3,
       "doc": "",
-      "sig": "function Sidebar({ symbols, activeSymbolId, onSelectSymbol })"
+      "sig": "function Sidebar({ symbols, activeSymbolId, onSelectSymbol, isOpen, onClose })"
     },
     {
       "id": "module:docgen/ui/src/components/SearchModal.jsx",
