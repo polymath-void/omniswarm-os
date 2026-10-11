@@ -35,6 +35,34 @@
         "hub_endpoint": "bore.pub:33458"
       },
       "timestamp": 1791670301.2658653
+    },
+    {
+      "agent_id": "PhoneAgent-Termux",
+      "status": "active_collaboration",
+      "target_agent": "PCAgent",
+      "mission": "BURNER_CHAT_WEBRTC",
+      "saved_state": {
+        "project": "Burner-Chat WebRTC",
+        "repository": "https://github.com/polymath-void/burner-chat",
+        "vision": "Zero-trace, platform-independent, zero-signup ephemeral encrypted P2P chat",
+        "phone_agent_delivered": [
+          "WebCrypto AES-256-GCM zero-knowledge fragment cryptosystem",
+          "WebRTC DataChannel P2P mesh engine",
+          "Responsive minimalist UI (Desktop, Tablet, Mobile)",
+          "PWA Manifest for Android & Desktop standalone installation",
+          "RAM-only Python & Node.js ephemeral signaling servers",
+          "Automated signaling handshake test suite",
+          "Unified CLI (burner_cli.py)"
+        ],
+        "pc_agent_delegation": [
+          "Deploy high-throughput Node.js signaling hub (signaling/server.js) on PC host",
+          "Provision public STUN/TURN traversal fallback relays",
+          "Expose public endpoint via Cloudflare tunnel or Bore gateway",
+          "Execute headless automated multi-peer load testing"
+        ],
+        "status": "DEPLOYED_AND_AWAITING_RELAY"
+      },
+      "timestamp": 1791681600.0
     }
   ]
-}
+}
