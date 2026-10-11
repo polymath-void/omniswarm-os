@@ -43,3 +43,6 @@ synty_chat_ledger.jsonl
 test_crash*.py
 test_zmq.py
 bore_watchdog.ps1
+.docgen_cache.json
+.inbox.jsonl
+.latest_notice.json

@@ -176,10 +176,17 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                 print(f"\n{CYAN}📩 [Directive Received #{msg['id']}] from {BOLD}{sender}{RESET}: {text}")
                 await harness.post_agent_log(f"Processing directive #{msg['id']} from {sender}: {text[:80]}")
 
-                # Trigger native Android Termux notification & vibration
+                # Trigger native Android Termux notification, toast, vibration & notice persistence
                 try:
                     from omniswarm_py.notifier import notify
-                    notify("OmniSwarm Task Directive", f"From {sender}: {text[:80]}")
+                    notify(
+                        title=f"OmniSwarm: {sender}",
+                        message=text,
+                        play_sound=True,
+                        sender=sender,
+                        msg_id=msg.get("id"),
+                        data=data
+                    )
                 except Exception:
                     pass
 
