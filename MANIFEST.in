@@ -1,0 +1,11 @@
+include README.md
+include requirements.txt
+include mesh_config.json
+include omnios_cli.py
+include bootloader.py
+include pc_agent.py
+include phone_agent.py
+include docs/*.md
+include .agents/rules/*.md
+recursive-include tests *.py
+global-exclude __pycache__ *.py[cod]

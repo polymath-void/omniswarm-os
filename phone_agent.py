@@ -26,6 +26,10 @@ sys.path.append(SCRIPT_DIR)
 
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 from omniswarm_py.mesh_config import load_mesh_config
+from omniswarm_py.governance import (
+    GovernanceError, TaskLedger, build_result_data, summarize_result,
+    validate_incoming_task, RESULT_ACTION,
+)
 
 CYAN = "\033[96m"
 GREEN = "\033[92m"
@@ -68,11 +72,11 @@ def get_device_info() -> Dict[str, Any]:
             
     return info
 
-async def execute_local_shell(command: str) -> Dict[str, Any]:
+async def execute_local_shell(command: str, timeout_s: float = 120.0) -> Dict[str, Any]:
     """Safely executes a shell command on the local device and captures stdout/stderr."""
     def _run():
         try:
-            res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
+            res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout_s)
             return {
                 "stdout": res.stdout,
                 "stderr": res.stderr,
@@ -80,7 +84,7 @@ async def execute_local_shell(command: str) -> Dict[str, Any]:
                 "success": res.returncode == 0
             }
         except subprocess.TimeoutExpired:
-            return {"error": "Execution timed out (120s limit)", "success": False, "returncode": -1}
+            return {"error": f"Execution timed out ({timeout_s:g}s limit)", "success": False, "returncode": -1}
         except Exception as e:
             return {"error": str(e), "success": False, "returncode": -1}
 
@@ -209,7 +213,48 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                     else:
                         action = "echo"
 
+                if action == "task_result":
+                    if await harness.apply_task_result(msg):
+                        print(f"    {GREEN}✅ Task result {data.get('task_id')} -> {data.get('status')}{RESET}")
+                    continue
+
                 # Dispatch Action
+                if action == "delegated_exec":
+                    try:
+                        task = validate_incoming_task(data, AGENT_ID, sender)
+                    except GovernanceError as ge:
+                        print(f"    {YELLOW}⛔ Rejected delegated task from {sender}: {ge}{RESET}")
+                        await harness.send_agent_message(
+                            recipient=sender,
+                            message=f"Task rejected: {ge}",
+                            data=build_result_data(data.get("task_id", "unknown"), "failed", {"success": False, "stderr": str(ge)}),
+                        )
+                        continue
+
+                    ledger = harness.executor_ledger()
+                    try:
+                        await asyncio.to_thread(ledger.record, sender, {**task, "target": AGENT_ID})
+                    except GovernanceError as ge:
+                        print(f"    {YELLOW}⛔ Duplicate or invalid task {task['task_id']}: {ge}{RESET}")
+                        continue
+                    await asyncio.to_thread(ledger.transition, task["task_id"], "running")
+                    print(f"    {YELLOW}▶ Delegated task {task['task_id']} from {sender}:{RESET} {task['cmd']}")
+                    await harness.post_agent_log(f"Running delegated task {task['task_id']} for {sender}: {task['cmd'][:80]}")
+
+                    exec_result = await execute_local_shell(task["cmd"], timeout_s=task["timeout_s"])
+                    summary = summarize_result(exec_result)
+                    status = "completed" if summary["success"] else "failed"
+                    await asyncio.to_thread(ledger.transition, task["task_id"], status, summary)
+
+                    await harness.post_agent_log(f"Delegated task {task['task_id']} {status} (rc={exec_result.get('returncode')})")
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message=f"Task {task['task_id']} {status}",
+                        data=build_result_data(task["task_id"], status, summary),
+                    )
+                    print(f"    {GREEN}✅ Task {task['task_id']} {status}; result sent to {sender}{RESET}")
+                    continue
+
                 if action == "exec_shell":
                     cmd = data.get("cmd") or ""
                     print(f"    {YELLOW}▶ Executing Shell Command:{RESET} {cmd}")

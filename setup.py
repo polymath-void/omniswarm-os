@@ -15,10 +15,12 @@ if not is_termux:
 
 setup(
     name="omniswarm-os",
-    version="1.1.0",
+    version="1.2.0",
     description="The Universal Decentralized Operating System for Edge-First AI Agent Swarms",
     author="Polymath-Void",
-    packages=find_packages(),
+    packages=find_packages(include=["omniswarm_py", "omniswarm_py.*", "docgen", "docgen.*"]),
+    py_modules=["omnios_cli", "bootloader", "pc_agent", "phone_agent"],
+    data_files=[(".", ["requirements.txt", "mesh_config.json"])],
     install_requires=install_reqs,
     python_requires=">=3.10",
     entry_points={

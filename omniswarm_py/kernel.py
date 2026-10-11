@@ -5,12 +5,20 @@ import asyncio
 import subprocess
 import shutil
 
-from mesh_broker import MCPMeshBroker
-from holographic_ast import HolographicASTGraph
-from void_governor import VoidGovernor
-from fall_detector import SystemFallDetector
-from intent_gc import IntentGarbageCollector
-from event_ledger import EventLedger
+try:
+    from omniswarm_py.mesh_broker import MCPMeshBroker
+    from omniswarm_py.holographic_ast import HolographicASTGraph
+    from omniswarm_py.void_governor import VoidGovernor
+    from omniswarm_py.fall_detector import SystemFallDetector
+    from omniswarm_py.intent_gc import IntentGarbageCollector
+    from omniswarm_py.event_ledger import EventLedger
+except ImportError:
+    from mesh_broker import MCPMeshBroker
+    from holographic_ast import HolographicASTGraph
+    from void_governor import VoidGovernor
+    from fall_detector import SystemFallDetector
+    from intent_gc import IntentGarbageCollector
+    from event_ledger import EventLedger
 
 class OmniOSRootKernel:
     def __init__(self, workspace_root=None):

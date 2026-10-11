@@ -10,8 +10,9 @@ def ensure_environment():
     """Ensures dependencies are installed and proxies the process into a VENV if on PC."""
     try:
         import zmq
-        import psutil
         import tornado
+        if not is_termux():
+            import psutil
         return # Everything is installed and accessible
     except ImportError:
         pass # Needs installation
@@ -19,6 +20,11 @@ def ensure_environment():
     print("\n[Bootloader] Missing dependencies detected. Initiating Auto-Setup...")
     workspace_root = os.path.dirname(os.path.abspath(__file__))
     req_file = os.path.join(workspace_root, "requirements.txt")
+    if not os.path.exists(req_file):
+        raise SystemExit(
+            "[Bootloader] Missing dependencies and no requirements.txt found. "
+            "Install them with: pip install omniswarm-os"
+        )
     
     if is_termux():
         print("[Bootloader] Termux OS Detected. Force-installing global packages...")

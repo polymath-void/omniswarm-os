@@ -3,9 +3,14 @@ import sys
 import asyncio
 import subprocess
 import shutil
-from mesh_broker import MCPMeshBroker
-from holographic_ast import HolographicASTGraph
-from void_governor import VoidGovernor
+try:
+    from omniswarm_py.mesh_broker import MCPMeshBroker
+    from omniswarm_py.holographic_ast import HolographicASTGraph
+    from omniswarm_py.void_governor import VoidGovernor
+except ImportError:
+    from mesh_broker import MCPMeshBroker
+    from holographic_ast import HolographicASTGraph
+    from void_governor import VoidGovernor
 
 class OmniHubRegistry:
     def __init__(self, workspace_root=None):

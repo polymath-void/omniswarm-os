@@ -25,11 +25,14 @@ async def execute_cli(tool_name, args_json):
         result = await harness.execute_in_swarm(tool_name, args, timeout=30.0)
         print(json.dumps(result, indent=2))
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 3:
-        print("Usage: ./omnios_cli.py <tool_name> '<json_args>'")
+        print("Usage: omnios-cli <tool_name> '<json_args>'")
         sys.exit(1)
-    
+
     tool = sys.argv[1]
     args_json = sys.argv[2]
     asyncio.run(execute_cli(tool, args_json))
+
+if __name__ == "__main__":
+    main()

@@ -293,6 +293,49 @@ class OmniOSAgentHarness:
         })
         return res.get("logs", [])
 
+    # =========================================================================
+    # Governed Task Delegation (Peer-to-Peer over the Swarm bus)
+    # =========================================================================
+
+    def task_ledger(self):
+        from omniswarm_py.governance import TaskLedger
+        return TaskLedger(self.workflow_file)
+
+    def executor_ledger(self):
+        from omniswarm_py.governance import TaskLedger
+        return TaskLedger(os.path.join(self.workspace_root, f"tasks_{self.agent_id}.json"))
+
+    async def delegate_task(self, target: str, cmd: str, timeout_s: float = 120.0) -> Dict[str, Any]:
+        """Hands a shell command to a peer node. The task is recorded as pending before it is sent."""
+        from omniswarm_py.governance import build_exec_task, TASK_ACTION
+        task = build_exec_task(self.agent_id, target, cmd, timeout_s)
+        ledger = self.task_ledger()
+        await asyncio.to_thread(ledger.record, self.agent_id, task)
+        res = await self.send_agent_message(
+            recipient=target,
+            message=f"Delegated task {task['task_id']}",
+            data=task,
+        )
+        if res.get("status") != "success":
+            await asyncio.to_thread(
+                ledger.transition, task["task_id"], "failed", {"success": False, "stderr": f"dispatch failed: {res.get('message')}"}
+            )
+        return {"task_id": task["task_id"], "action": TASK_ACTION, "dispatch": res}
+
+    async def apply_task_result(self, message: Dict[str, Any]) -> bool:
+        """Applies a task_result message to the local ledger. Returns False if the message is not a result."""
+        from omniswarm_py.governance import RESULT_ACTION, GovernanceError
+        data = message.get("data") or {}
+        if data.get("action") != RESULT_ACTION:
+            return False
+        try:
+            await asyncio.to_thread(
+                self.task_ledger().transition, data.get("task_id", ""), data.get("status", ""), data.get("result"), message.get("sender")
+            )
+        except GovernanceError as ge:
+            print(f"[Harness:{self.agent_id}] Task result not applied: {ge}")
+        return True
+
     async def get_latest_ids(self) -> Dict[str, int]:
         """Gets the latest message ID and log ID from the swarm."""
         res = await self.execute_in_swarm("swarm_get_latest_ids", {})

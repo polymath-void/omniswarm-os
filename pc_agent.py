@@ -197,6 +197,9 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
                     continue  # Ignore messages sent by self
                 text = msg.get("message", "")
                 data = msg.get("data") or {}
+                if await harness.apply_task_result(msg):
+                    print(f"[PCAgent] Task result from {sender}: {text}")
+                    continue
 
                 print(f"\n{CYAN}📩 [Directive Received #{msg['id']}] from {BOLD}{sender}{RESET}: {text}")
                 await harness.post_agent_log(f"Processing directive #{msg['id']} from {sender}: {text[:80]}")
@@ -317,7 +320,7 @@ async def main():
 
     cmd = args[0]
     
-    async with OmniOSAgentHarness(agent_id=AGENT_ID, host="127.0.0.1", rpc_port=5565) as harness:
+    async with OmniOSAgentHarness(agent_id=AGENT_ID) as harness:
         if cmd in ["loop", "--loop-only", "--daemon", "daemon"]:
             await run_autonomous_loop(harness)
         elif cmd == "send":
@@ -334,6 +337,12 @@ async def main():
                 f"Execute shell: {shell_cmd}",
                 data={"action": "exec_shell", "cmd": shell_cmd}
             )
+
+        elif cmd == "delegate":
+            recipient = args[1] if len(args) > 1 else "PhoneAgent-Termux"
+            shell_cmd = " ".join(args[2:]) if len(args) > 2 else "uname -a"
+            res = await harness.delegate_task(recipient, shell_cmd)
+            print(json.dumps(res, indent=2))
 
         elif cmd == "health":
             recipient = args[1] if len(args) > 1 else "PhoneAgent-Termux"

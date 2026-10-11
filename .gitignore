@@ -46,3 +46,4 @@ bore_watchdog.ps1
 .docgen_cache.json
 .inbox.jsonl
 .latest_notice.json
+tasks_*.json
