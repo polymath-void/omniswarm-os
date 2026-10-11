@@ -235,7 +235,7 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
                     try:
                         await asyncio.to_thread(ledger.record, sender, {**task, "target": AGENT_ID})
                     except GovernanceError as ge:
-                        print(f"    {YELLOW}⛔ Duplicate or invalid task {task['task_id']}: {ge}{RESET}")
+                        print(f"    {YELLOW}↷ Skipping already-handled task {task['task_id']}: {ge}{RESET}")
                         continue
                     await asyncio.to_thread(ledger.transition, task["task_id"], "running")
                     print(f"    {YELLOW}▶ Delegated task {task['task_id']} from {sender}:{RESET} {task['cmd']}")
