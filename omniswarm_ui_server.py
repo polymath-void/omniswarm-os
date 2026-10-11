@@ -105,28 +105,13 @@ def probe_node_status() -> Dict[str, Any]:
         "config": cfg
     }
 
-async def fetch_swarm_data():
-    """Fetches messages and logs from the Swarm mesh via ZMQ harness."""
-    try:
-        async with OmniOSAgentHarness(agent_id="CockpitMonitor") as harness:
-            # 1. Chat messages from swarm_dev
-            chat_msgs = await harness.chat_read("swarm_dev", limit=40)
-            # 2. Direct messages
-            direct_msgs = await harness.read_my_messages(since_id=0, limit=40)
-            # 3. Operational logs
-            logs = await harness.stream_agent_logs(limit=40)
-            return chat_msgs, direct_msgs, logs
-    except Exception as e:
-        return [], [], [{"id": -1, "agent_id": "Cockpit", "level": "WARN", "message": f"Mesh connection notice: {e}", "timestamp": time.time()}]
-
-def background_poller():
-    """Background worker that continuously refreshes state without blocking HTTP requests."""
+async def async_poller():
+    harness = None
     while True:
         try:
             telemetry = get_device_telemetry()
             node_status = probe_node_status()
 
-            # Read workflow.json
             workflow = None
             if os.path.exists(WORKFLOW_FILE):
                 try:
@@ -135,15 +120,23 @@ def background_poller():
                 except Exception:
                     pass
 
-            # Query ZMQ if hub is alive
             chat_msgs, direct_msgs, logs = [], [], []
             if node_status.get("pc_hub_reachable"):
                 try:
-                    chat_msgs, direct_msgs, logs = asyncio.run(fetch_swarm_data())
+                    if harness is None:
+                        harness = OmniOSAgentHarness(agent_id="CockpitMonitor")
+                        await harness.connect()
+                    chat_msgs = await harness.chat_read("swarm_dev", limit=40)
+                    direct_msgs = await harness.read_my_messages(since_id=0, limit=40)
+                    logs = await harness.stream_agent_logs(limit=40)
                 except Exception:
-                    pass
+                    if harness:
+                        try:
+                            harness.disconnect()
+                        except Exception:
+                            pass
+                    harness = None
 
-            # Combine and normalize messages
             combined_messages = []
             seen_ids = set()
             for m in (chat_msgs + direct_msgs):
@@ -152,7 +145,6 @@ def background_poller():
                     seen_ids.add(m_id)
                     combined_messages.append(m)
 
-            # Sort by timestamp
             combined_messages.sort(key=lambda x: x.get("timestamp", 0))
 
             with state_lock:
@@ -163,10 +155,14 @@ def background_poller():
                 state_cache["node_status"] = node_status
                 state_cache["last_update"] = time.time()
 
-        except Exception as e:
+        except Exception:
             pass
 
-        time.sleep(1.0)
+        await asyncio.sleep(1.0)
+
+def background_poller():
+    """Background worker that continuously refreshes state with a persistent ZMQ connection."""
+    asyncio.run(async_poller())
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
