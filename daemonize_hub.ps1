@@ -91,23 +91,23 @@ function Start-Hub {
     $boreRunning = $borePid -gt 0 -and (Is-ProcessRunning $borePid)
     $boreExeRunning = (Get-Process -Name "bore" -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0
 
-    if ($boreRunning -and $boreExeRunning) {
-        Write-Host "    [OK] Bore Tunnel Watchdog is already running (PID: $borePid)" -ForegroundColor Green
+    if ($boreRunning -or $boreExeRunning) {
+        Write-Host "    [OK] Bore Tunnel is already running" -ForegroundColor Green
     } else {
-        Write-Host "    Launching Bore Tunnel Watchdog (bore.pub:33458 -> localhost:5565)..." -ForegroundColor Yellow
-        $watchdogScript = "while (`$true) { Write-Output `"[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Starting bore tunnel on 33458...`"; & `'$BORE_EXE`' local 5565 --to bore.pub --port 33458 *>> `'$BORE_LOG`'; Start-Sleep -Seconds 2 }"
-        
-        $boreProc = Start-Process -FilePath "powershell.exe" `
-            -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$watchdogScript`"" `
+        Write-Host "    Launching Bore Tunnel (bore.pub:33458 -> localhost:5565)..." -ForegroundColor Yellow
+        $boreProc = Start-Process -FilePath $BORE_EXE `
+            -ArgumentList "local 5565 --to bore.pub --port 33458" `
             -WorkingDirectory $WORKSPACE `
             -WindowStyle Hidden `
-            -PassThru
+            -PassThru `
+            -RedirectStandardOutput $BORE_LOG `
+            -RedirectStandardError (Join-Path $WORKSPACE "bore_tunnel_err.log")
 
         if ($boreProc) {
             Set-Content -Path $BORE_PID_FILE -Value $boreProc.Id -Force
-            Write-Host "    [OK] Bore Tunnel Watchdog started (PID: $($boreProc.Id))" -ForegroundColor Green
+            Write-Host "    [OK] Bore Tunnel started (PID: $($boreProc.Id))" -ForegroundColor Green
         } else {
-            Write-Host "    [ERROR] Failed to start Bore Tunnel Watchdog" -ForegroundColor Red
+            Write-Host "    [ERROR] Failed to start Bore Tunnel" -ForegroundColor Red
         }
     }
 
@@ -181,10 +181,12 @@ function Get-HubStatus {
     $hubPid = Get-StoredPid $HUB_PID_FILE
     $hubRunning = $hubPid -gt 0 -and (Is-ProcessRunning $hubPid)
     $port5565 = Get-NetTCPConnection -LocalPort 5565 -State Listen -ErrorAction SilentlyContinue
+    $kernelProc = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%omniswarm_daemon.py%'" -ErrorAction SilentlyContinue | Select-Object -First 1
 
-    if ($hubRunning -or $port5565) {
+    if ($hubRunning -or $port5565 -or $kernelProc) {
+        $actualPid = if ($hubRunning) { $hubPid } elseif ($kernelProc) { $kernelProc.ProcessId } elseif ($port5565) { $port5565.OwningProcess } else { 'Active' }
         Write-Host "`n[OmniOS Kernel]     : [ONLINE]" -ForegroundColor Green
-        Write-Host "  PID               : $(if ($hubRunning) { $hubPid } else { 'External' })"
+        Write-Host "  PID               : $actualPid"
         Write-Host "  Port 5565 (RPC)   : $(if ($port5565) { 'LISTENING' } else { 'WAITING' })"
     } else {
         Write-Host "`n[OmniOS Kernel]     : [STOPPED]" -ForegroundColor Red
@@ -192,11 +194,13 @@ function Get-HubStatus {
 
     # Check Bore Tunnel
     $borePid = Get-StoredPid $BORE_PID_FILE
-    $boreRunning = (Get-Process -Name "bore" -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0
+    $boreProcs = Get-Process -Name "bore" -ErrorAction SilentlyContinue
+    $boreRunning = ($boreProcs | Measure-Object).Count -gt 0
     if ($boreRunning) {
+        $actualBorePid = if ($borePid -gt 0 -and (Is-ProcessRunning $borePid)) { $borePid } else { ($boreProcs | Select-Object -First 1).Id }
         Write-Host "`n[Bore Tunnel]       : [ONLINE]" -ForegroundColor Green
         Write-Host "  Endpoint          : bore.pub:33458 -> localhost:5565"
-        Write-Host "  Watchdog PID      : $(if ($borePid -gt 0) { $borePid } else { 'External' })"
+        Write-Host "  PID               : $actualBorePid"
     } else {
         Write-Host "`n[Bore Tunnel]       : [STOPPED]" -ForegroundColor Red
     }
@@ -204,9 +208,11 @@ function Get-HubStatus {
     # Check PCAgent Loop
     $agentPid = Get-StoredPid $AGENT_PID_FILE
     $agentRunning = $agentPid -gt 0 -and (Is-ProcessRunning $agentPid)
-    if ($agentRunning) {
+    $agentProc = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%pc_agent.py%--loop-only%' or CommandLine LIKE '%pc_agent.py%loop%'" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($agentRunning -or $agentProc) {
+        $actualAgentPid = if ($agentRunning) { $agentPid } else { $agentProc.ProcessId }
         Write-Host "`n[PCAgent Loop]      : [ONLINE]" -ForegroundColor Green
-        Write-Host "  PID               : $agentPid"
+        Write-Host "  PID               : $actualAgentPid"
     } else {
         Write-Host "`n[PCAgent Loop]      : [STOPPED]" -ForegroundColor Red
     }
