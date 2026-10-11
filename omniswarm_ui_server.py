@@ -156,10 +156,15 @@ async def async_poller():
                         harness = OmniOSAgentHarness(agent_id="CockpitMonitor")
                         await harness.connect()
                     
-                    # Fetch ALL swarm messages across all agents (exact conversation)
+                    # Fetch latest message watermark first to get recent messages
+                    latest_info = await harness.get_latest_ids()
+                    latest_id = latest_info.get("latest_message_id", 0)
+                    since_id = max(0, latest_id - 100)
+
+                    # Fetch ALL recent swarm messages across all agents (exact conversation)
                     res = await harness.execute_in_swarm("swarm_read_messages", {
                         "agent_id": "*",
-                        "since_id": 0,
+                        "since_id": since_id,
                         "limit": 100
                     })
                     raw_msgs = res.get("messages", [])
