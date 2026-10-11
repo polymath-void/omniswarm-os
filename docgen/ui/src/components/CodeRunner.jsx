@@ -1,22 +1,20 @@
 import React, { useState, useEffect } from 'react';
 
 export default function CodeRunner({ symbol }) {
-  const defaultSnippet = `# Test snippet for ${symbol?.name || 'OmniSwarm'}
-# Runs natively in your browser via WebAssembly (Pyodide)
+  const defaultSnippet = `# Test snippet for ${symbol?.name || 'DocGen'}
+# Runs in-browser WebAssembly via Pyodide
 
 print("⚡ Testing Live Execution...")
 for i in range(1, 4):
     print(f"Step {i}: Verification OK")
 
-result = {"status": "SUCCESS", "target": "${symbol?.name || 'OmniSwarm'}"}
+result = {"status": "SUCCESS", "target": "${symbol?.name || 'DocGen'}"}
 print("Final Output:", result)
 `;
 
   const [code, setCode] = useState(defaultSnippet);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-  const [pyodideReady, setPyodideReady] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('Idle');
 
   useEffect(() => {
     if (symbol?.name) {
@@ -29,7 +27,6 @@ print("Final Output:", result)
     setOutput('🚀 Initializing execution environment...\n');
 
     try {
-      // Check if pyodide is in window
       if (!window.loadPyodide && !window.__pyodide_instance) {
         setOutput(prev => prev + '⏳ Loading Pyodide WebAssembly runtime from CDN...\n');
         const script = document.createElement('script');
@@ -48,7 +45,6 @@ print("Final Output:", result)
           stdout: (text) => setOutput(prev => prev + text + '\n'),
           stderr: (text) => setOutput(prev => prev + '[ERR] ' + text + '\n')
         });
-        setPyodideReady(true);
       }
 
       setOutput(prev => prev + '▶ Executing Python code:\n-----------------------------\n');
@@ -67,30 +63,33 @@ print("Final Output:", result)
     }
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
       {/* Top Header */}
       <div style={{
-        padding: '12px 20px',
+        padding: '10px 16px',
         borderBottom: '1px solid var(--border-color)',
         background: 'var(--bg-secondary)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            🐍 Living WebAssembly Sandbox (Pyodide)
+            🐍 WebAssembly Sandbox
           </span>
           <span style={{
             fontSize: '11px',
             color: 'var(--accent-green)',
-            background: 'rgba(63, 185, 80, 0.1)',
-            padding: '2px 6px',
+            background: 'rgba(16, 185, 129, 0.1)',
+            padding: '1px 6px',
             borderRadius: '4px',
-            border: '1px solid rgba(63, 185, 80, 0.2)'
+            border: '1px solid rgba(16, 185, 129, 0.2)'
           }}>
-            Zero-Backend Browser Wasm
+            In-Browser
           </span>
         </div>
 
@@ -98,7 +97,7 @@ print("Final Output:", result)
           onClick={runCode}
           disabled={isRunning}
           style={{
-            padding: '6px 16px',
+            padding: '5px 14px',
             background: isRunning ? 'var(--bg-tertiary)' : 'var(--accent-green)',
             color: '#fff',
             fontWeight: 600,
@@ -115,11 +114,22 @@ print("Final Output:", result)
         </button>
       </div>
 
-      {/* Code Editor & Output Split */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden' }}>
+      {/* Code Editor & Output (Responsive Split) */}
+      <div style={{
+        flex: 1,
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gridTemplateRows: isMobile ? '1fr 1fr' : '1fr',
+        overflow: 'hidden'
+      }}>
         {/* Editor */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
-          <div style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          borderRight: isMobile ? 'none' : '1px solid var(--border-color)',
+          borderBottom: isMobile ? '1px solid var(--border-color)' : 'none'
+        }}>
+          <div style={{ padding: '6px 12px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--text-secondary)' }}>
             Python Code Editor
           </div>
           <textarea
@@ -130,10 +140,10 @@ print("Final Output:", result)
               flex: 1,
               background: 'var(--bg-primary)',
               border: 'none',
-              padding: '16px',
+              padding: '14px',
               color: 'var(--text-primary)',
               fontFamily: 'var(--font-mono)',
-              fontSize: '13px',
+              fontSize: '12px',
               lineHeight: 1.5,
               resize: 'none',
               outline: 'none'
@@ -142,17 +152,17 @@ print("Final Output:", result)
         </div>
 
         {/* Terminal Output */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: '#090d13' }}>
-          <div style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', background: '#06090e' }}>
+          <div style={{ padding: '6px 12px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--text-secondary)' }}>
             Execution Console (stdout / stderr)
           </div>
           <pre style={{
             flex: 1,
             margin: 0,
-            padding: '16px',
+            padding: '14px',
             background: 'transparent',
             border: 'none',
-            color: '#a6e3a1',
+            color: '#34d399',
             fontSize: '12px',
             lineHeight: 1.5,
             whiteSpace: 'pre-wrap',

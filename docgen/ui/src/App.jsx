@@ -14,9 +14,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [activeSymbolId, setActiveSymbolId] = useState(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Load manifest
     fetch('./docs_manifest.json')
       .then(res => {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
@@ -25,7 +25,6 @@ export default function App() {
       .then(data => {
         setManifest(data);
         setLoading(false);
-        // Default to first class or function
         const firstSym = Object.values(data.symbols || {}).find(s => s.type === 'class' || s.type === 'function');
         if (firstSym) {
           setActiveSymbolId(firstSym.full_name || firstSym.id);
@@ -33,7 +32,7 @@ export default function App() {
       })
       .catch(err => {
         console.error('Failed to load docs_manifest.json:', err);
-        setError('Could not load docs_manifest.json. Please run "python docgen_cli.py build" first.');
+        setError('Could not load docs_manifest.json. Please run "docgen build" first.');
         setLoading(false);
       });
   }, []);
@@ -51,7 +50,6 @@ export default function App() {
   }, []);
 
   const handleSelectSymbol = (symId) => {
-    // If symId is just a name, find full_name
     let target = symId;
     if (manifest?.symbols && !manifest.symbols[symId]) {
       const match = Object.values(manifest.symbols).find(s => s.name === symId);
@@ -59,6 +57,7 @@ export default function App() {
     }
     setActiveSymbolId(target);
     setActiveTab('symbols');
+    setIsSidebarOpen(false);
   };
 
   if (loading) {
@@ -70,9 +69,10 @@ export default function App() {
         justifyContent: 'center',
         background: 'var(--bg-primary)',
         color: 'var(--text-secondary)',
-        fontFamily: 'var(--font-mono)'
+        fontFamily: 'var(--font-mono)',
+        fontSize: '13px'
       }}>
-        ⚡ Loading Living AST Manifest...
+        ⚡ Bootstrapping Living AST Manifest...
       </div>
     );
   }
@@ -87,11 +87,13 @@ export default function App() {
         background: 'var(--bg-primary)',
         color: 'var(--accent-red)',
         flexDirection: 'column',
-        gap: '12px'
+        gap: '12px',
+        padding: '20px',
+        textAlign: 'center'
       }}>
-        <div style={{ fontSize: '24px' }}>⚠️ {error}</div>
+        <div style={{ fontSize: '20px' }}>⚠️ {error}</div>
         <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Run: <code>python docgen_cli.py build</code>
+          Run: <code>docgen build</code>
         </div>
       </div>
     );
@@ -100,25 +102,29 @@ export default function App() {
   const activeSymbol = manifest?.symbols ? manifest.symbols[activeSymbolId] : null;
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Header
         project={manifest?.project}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenSearch={() => setIsSearchOpen(true)}
+        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+        isSidebarOpen={isSidebarOpen}
       />
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Sidebar visible when on Symbols or Graph */}
-        {(activeTab === 'symbols' || activeTab === 'graph') && (
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+        {/* Sidebar visible when on Symbols or Graph, or toggled on mobile */}
+        {(activeTab === 'symbols' || activeTab === 'graph' || isSidebarOpen) && (
           <Sidebar
             symbols={manifest?.symbols}
             activeSymbolId={activeSymbolId}
             onSelectSymbol={handleSelectSymbol}
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
           />
         )}
 
-        {/* Main Tab Content */}
+        {/* Main Workspace Tabs */}
         {activeTab === 'overview' && (
           <Overview
             project={manifest?.project}
