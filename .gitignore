@@ -50,3 +50,4 @@ tasks_*.json
 
 # Deployed build artifacts (runtime, not source)
 builds/
+.phone_agent.lock

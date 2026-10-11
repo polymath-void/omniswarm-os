@@ -445,6 +445,34 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness, device_info: dict):
             print(f"{YELLOW}Loop Notice: {e}{RESET}")
             await asyncio.sleep(5.0)
 
+LOCK_FILE = os.path.join(SCRIPT_DIR, ".phone_agent.lock")
+
+def acquire_single_instance_lock():
+    """Refuses to start a second loop on the same node; two loops race on one bus."""
+    try:
+        fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        return True
+    except FileExistsError:
+        try:
+            with open(LOCK_FILE) as f:
+                owner = int(f.read().strip() or 0)
+        except (OSError, ValueError):
+            owner = 0
+        if owner and os.path.exists(f"/proc/{owner}"):
+            return False
+        os.remove(LOCK_FILE)
+        return acquire_single_instance_lock()
+
+def release_single_instance_lock():
+    try:
+        with open(LOCK_FILE) as f:
+            if f.read().strip() == str(os.getpid()):
+                os.remove(LOCK_FILE)
+    except OSError:
+        pass
+
 async def main():
     print(f"\n{CYAN}======================================================={RESET}")
     print(f"{CYAN}       🤖 OMNISWARM AUTONOMOUS PHONE AGENT ONLINE      {RESET}")
@@ -470,8 +498,14 @@ async def main():
             print(f"\n{GREEN}🎉 Initial Mission Succeeded!{RESET}")
 
         if not test_only:
-            # Enter Zero-HIL Autonomous Loop
-            await run_autonomous_loop(harness, device_info)
+            if not acquire_single_instance_lock():
+                print(f"{YELLOW}Another phone loop is already running on this node; exiting.{RESET}")
+                return
+            try:
+                # Enter Zero-HIL Autonomous Loop
+                await run_autonomous_loop(harness, device_info)
+            finally:
+                release_single_instance_lock()
 
 if __name__ == "__main__":
     try:
