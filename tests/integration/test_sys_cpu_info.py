@@ -14,9 +14,13 @@ async def run_and_listen():
         
         result = await harness.execute_in_swarm("publish_skill", command_payload)
         print("\n[PC SKILL RESPONSE RECEIVED]")
-        print("💻 Routing Status:", result['message'])
+        status = result.get('status')
+        detail = result.get('message') or result.get('error') or result
+        print("💻 Routing Status:", status, "-", detail)
         if 'stdout' in result:
             print("Output:", result['stdout'])
+        return status == 'success'
 
 if __name__ == "__main__":
-    asyncio.run(run_and_listen())
+    import sys
+    sys.exit(0 if asyncio.run(run_and_listen()) else 1)
