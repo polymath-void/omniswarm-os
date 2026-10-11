@@ -26,7 +26,7 @@ MAGENTA = "\033[95m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-WORKSPACE_ROOT = os.path.dirname(os.path.abspath(__file__))
+WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 WORKFLOW_FILE = os.path.join(WORKSPACE_ROOT, "workflow.json")
 DB_PATH = os.path.join(WORKSPACE_ROOT, "agy_nodeos.db")
 

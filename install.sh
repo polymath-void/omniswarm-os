@@ -140,11 +140,11 @@ if [ "$ROLE" == "hub" ]; then
 else
   echo "To execute a test skill against the Swarm:"
   if [ "$IS_TERMUX" = true ]; then
-    echo "  python test_sys_cpu_info.py"
-    echo "  python test_query_skills.py"
+    echo "  python tests/integration/test_sys_cpu_info.py"
+    echo "  python tests/integration/test_query_skills.py"
   else
-    echo "  $PYTHON_BIN test_sys_cpu_info.py"
-    echo "  $PYTHON_BIN test_query_skills.py"
+    echo "  $PYTHON_BIN tests/integration/test_sys_cpu_info.py"
+    echo "  $PYTHON_BIN tests/integration/test_query_skills.py"
   fi
 fi
 echo "======================================================================"

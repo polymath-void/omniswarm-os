@@ -133,6 +133,6 @@ if ($Role -eq "Hub") {
     Write-Host "  .omnios_venv\Scripts\python.exe omniswarm_py\omniswarm_daemon.py" -ForegroundColor White
 } else {
     Write-Host "To execute a test skill against the Swarm:" -ForegroundColor Green
-    Write-Host "  .omnios_venv\Scripts\python.exe test_sys_cpu_info.py" -ForegroundColor White
+    Write-Host "  .omnios_venv\Scripts\python.exe tests\integration\test_sys_cpu_info.py" -ForegroundColor White
 }
 Write-Host "======================================================================" -ForegroundColor Cyan

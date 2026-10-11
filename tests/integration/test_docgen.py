@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, SCRIPT_DIR)
 
 from docgen.extractor import extract_file_symbols, calculate_python_complexity
