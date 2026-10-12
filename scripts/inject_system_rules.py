@@ -38,13 +38,22 @@ Whenever the USER asks to communicate with the Phone Agent, check the phone, run
 
 2. **Zero-HIL Protocol (Zero Human-In-The-Loop):**
    - You MUST NOT instruct the human to copy and paste messages, commands, or logs between the PC and Phone.
-   - Use the native Swarm Bridge CLI (`pc_agent.py`) via `run_command`:
-     - **Send Message / Query**:
-       `python pc_agent.py send PhoneAgent-Termux "<message>"`
-     - **Execute Shell Command on Phone (Termux)**:
-       `python pc_agent.py exec PhoneAgent-Termux "<command>"`
+   - Use the native Swarm Bridge CLI (`pc_agent.py`) or Operator CLI (`omniswarm_py.ops`) via `run_command`:
+     - **Governed Task Delegation (v1.2.0 Standard)**:
+       `python pc_agent.py delegate PhoneAgent-Termux "<command>" [timeout_s]`
+       *or via Operator CLI*:
+       `python -m omniswarm_py.ops run PhoneAgent-Termux "<command>" --timeout 120`
      - **Query Phone Device Health & Battery**:
        `python pc_agent.py health PhoneAgent-Termux`
+       *or via Operator CLI*:
+       `python -m omniswarm_py.ops health PhoneAgent-Termux`
+     - **Send Message / Query**:
+       `python pc_agent.py send PhoneAgent-Termux "<message>"`
+       *or via Operator CLI*:
+       `python -m omniswarm_py.ops send PhoneAgent-Termux "<message>"`
+     - **Inspect Governed Tasks & State**:
+       `python -m omniswarm_py.ops task list`
+       `python -m omniswarm_py.ops task status <task_id>`
      - **SyntyChat Room Discussion**:
        `python pc_agent.py chat swarm_dev "<message>"`
      - **Dispatch Autonomous Task Directive**:
