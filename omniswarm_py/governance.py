@@ -120,10 +120,24 @@ class TaskLedger:
         return wf
 
     def _save(self, wf: Dict[str, Any]) -> None:
+        os.makedirs(os.path.dirname(os.path.abspath(self.workflow_file)), exist_ok=True)
         tmp_file = self.workflow_file + ".tmp"
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(wf, f, indent=2)
         os.replace(tmp_file, self.workflow_file)
+
+    def get(self, task_id: str) -> Optional[Dict[str, Any]]:
+        with _LEDGER_LOCK:
+            wf = self._load()
+        for intent in reversed(wf["intents"]):
+            if intent.get("kind") == "delegated_task" and (intent.get("saved_state") or {}).get("task_id") == task_id:
+                return intent
+        return None
+
+    def list_tasks(self) -> list:
+        with _LEDGER_LOCK:
+            wf = self._load()
+        return [i for i in wf["intents"] if i.get("kind") == "delegated_task"]
 
     def record(self, agent_id: str, task: Dict[str, Any]) -> None:
         with _LEDGER_LOCK:
