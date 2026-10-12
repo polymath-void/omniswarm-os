@@ -303,7 +303,7 @@ class OmniOSAgentHarness:
 
     def executor_ledger(self):
         from omniswarm_py.governance import TaskLedger
-        return TaskLedger(os.path.join(self.workspace_root, f"tasks_{self.agent_id}.json"))
+        return TaskLedger(os.path.join(self.workspace_root, ".omnios", f"executor_{self.agent_id}.json"))
 
     async def delegate_task(self, target: str, cmd: str, timeout_s: float = 120.0) -> Dict[str, Any]:
         """Hands a shell command to a peer node. The task is recorded as pending before it is sent."""
