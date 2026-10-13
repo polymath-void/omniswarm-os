@@ -30,7 +30,14 @@ sys.path.append(SCRIPT_DIR)
 
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 from omniswarm_py.mesh_config import load_mesh_config
+<<<<<<< Updated upstream
 from omniswarm_py.governance import summarize_result, build_result_data, TASK_ACTION
+=======
+from omniswarm_py.governance import (
+    GovernanceError, TaskLedger, build_result_data, summarize_result,
+    validate_incoming_task, TASK_ACTION, RESULT_ACTION,
+)
+>>>>>>> Stashed changes
 
 CYAN = "\033[96m"
 GREEN = "\033[92m"
@@ -215,6 +222,44 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
 
                 # Determine action type
                 action = data.get("action")
+
+                # Handle incoming delegated tasks from PhoneAgent (or other peers)
+                if action == TASK_ACTION:
+                    try:
+                        task = validate_incoming_task(data, AGENT_ID, sender)
+                    except GovernanceError as ge:
+                        print(f"    {YELLOW}⛔ Rejected delegated task from {sender}: {ge}{RESET}")
+                        await harness.send_agent_message(
+                            recipient=sender,
+                            message=f"Task rejected: {ge}",
+                            data=build_result_data(data.get("task_id", "unknown"), "failed", {"success": False, "stderr": str(ge)}),
+                        )
+                        continue
+
+                    ledger = harness.executor_ledger()
+                    try:
+                        await asyncio.to_thread(ledger.record, sender, {**task, "target": AGENT_ID})
+                    except GovernanceError as ge:
+                        print(f"    {YELLOW}↷ Skipping already-handled task {task['task_id']}: {ge}{RESET}")
+                        continue
+                    await asyncio.to_thread(ledger.transition, task["task_id"], "running")
+                    print(f"    {YELLOW}▶ Delegated task {task['task_id']} from {sender}:{RESET} {task['cmd']}")
+                    await harness.post_agent_log(f"Running delegated task {task['task_id']} for {sender}: {task['cmd'][:80]}")
+
+                    exec_result = await execute_pc_local_shell(task["cmd"])
+                    summary = summarize_result(exec_result)
+                    status = "completed" if summary["success"] else "failed"
+                    await asyncio.to_thread(ledger.transition, task["task_id"], status, summary)
+
+                    await harness.post_agent_log(f"Delegated task {task['task_id']} {status} (rc={exec_result.get('returncode')})")
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message=f"Task {task['task_id']} {status}",
+                        data=build_result_data(task["task_id"], status, summary),
+                    )
+                    print(f"    {GREEN}✅ Task {task['task_id']} {status}; result sent to {sender}{RESET}")
+                    continue
+
                 if not action:
                     if text.startswith("exec:"):
                         action = "exec_shell"
