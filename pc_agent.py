@@ -30,14 +30,10 @@ sys.path.append(SCRIPT_DIR)
 
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 from omniswarm_py.mesh_config import load_mesh_config
-<<<<<<< Updated upstream
-from omniswarm_py.governance import summarize_result, build_result_data, TASK_ACTION
-=======
 from omniswarm_py.governance import (
-    GovernanceError, TaskLedger, build_result_data, summarize_result,
-    validate_incoming_task, TASK_ACTION, RESULT_ACTION,
+    GovernanceError, build_result_data, summarize_result,
+    validate_incoming_task, TASK_ACTION,
 )
->>>>>>> Stashed changes
 
 CYAN = "\033[96m"
 GREEN = "\033[92m"
@@ -222,8 +218,22 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
 
                 # Determine action type
                 action = data.get("action")
+                if not action:
+                    if text.startswith("exec:"):
+                        action = "exec_shell"
+                        data["cmd"] = text[5:].strip()
+                    elif text.lower() in ["health", "health_check", "status"]:
+                        action = "health_check"
+                    elif text.lower() in ["ping", "are you alive?"]:
+                        action = "ping"
+                    elif text.lower() in ["git_sync", "git pull", "sync"]:
+                        action = "git_sync"
+                    elif text.lower() in ["verify", "verify_install"]:
+                        action = "verify_install"
+                    else:
+                        action = "echo"
 
-                # Handle incoming delegated tasks from PhoneAgent (or other peers)
+                # Dispatch Action
                 if action == TASK_ACTION:
                     try:
                         task = validate_incoming_task(data, AGENT_ID, sender)
@@ -243,12 +253,12 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
                         print(f"    {YELLOW}↷ Skipping already-handled task {task['task_id']}: {ge}{RESET}")
                         continue
                     await asyncio.to_thread(ledger.transition, task["task_id"], "running")
-                    print(f"    {YELLOW}▶ Delegated task {task['task_id']} from {sender}:{RESET} {task['cmd']}")
+                    print(f"    {YELLOW}▶ [Governance] Delegated task {task['task_id']} from {sender}:{RESET} {task['cmd']}")
                     await harness.post_agent_log(f"Running delegated task {task['task_id']} for {sender}: {task['cmd'][:80]}")
 
                     exec_result = await execute_pc_local_shell(task["cmd"])
                     summary = summarize_result(exec_result)
-                    status = "completed" if summary["success"] else "failed"
+                    status = "completed" if summary.get("success") else "failed"
                     await asyncio.to_thread(ledger.transition, task["task_id"], status, summary)
 
                     await harness.post_agent_log(f"Delegated task {task['task_id']} {status} (rc={exec_result.get('returncode')})")
@@ -257,44 +267,9 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
                         message=f"Task {task['task_id']} {status}",
                         data=build_result_data(task["task_id"], status, summary),
                     )
-                    print(f"    {GREEN}✅ Task {task['task_id']} {status}; result sent to {sender}{RESET}")
-                    continue
-
-                if not action:
-                    if text.startswith("exec:"):
-                        action = "exec_shell"
-                        data["cmd"] = text[5:].strip()
-                    elif text.lower() in ["health", "health_check", "status"]:
-                        action = "health_check"
-                    elif text.lower() in ["ping", "are you alive?"]:
-                        action = "ping"
-                    elif text.lower() in ["git_sync", "git pull", "sync"]:
-                        action = "git_sync"
-                    elif text.lower() in ["verify", "verify_install"]:
-                        action = "verify_install"
-                    else:
-                        action = "echo"
-
-                # Dispatch Action
-                if action == TASK_ACTION or action == "delegated_exec" or data.get("action") == TASK_ACTION:
-                    task_id = data.get("task_id") or f"task_{int(time.time()*1000)}"
-                    cmd = data.get("cmd") or ""
-                    print(f"    {YELLOW}▶ [Governance] Executing Delegated Task {task_id} from {sender}:{RESET} {cmd}")
-                    await harness.post_agent_log(f"PC Executing Delegated Task {task_id}: {cmd}")
-                    exec_result = await execute_pc_local_shell(cmd)
-                    summary = summarize_result(exec_result)
-                    status = "completed" if summary.get("success") else "failed"
-
-                    await harness.post_agent_log(f"Task {task_id} [{status}]: {(summary.get('stdout') or summary.get('stderr') or '')[:100]}")
-                    res_data = build_result_data(task_id, status, summary)
-                    await harness.send_agent_message(
-                        recipient=sender,
-                        message=f"Task {task_id} {status}",
-                        data=res_data
-                    )
-                    chat_msg = f"✅ [PCAgent] Delegated task {task_id} {status}: stdout={(summary.get('stdout') or summary.get('stderr') or '').strip()[:150]}"
+                    chat_msg = f"✅ [PCAgent] Delegated task {task['task_id']} {status}: stdout={(summary.get('stdout') or summary.get('stderr') or '').strip()[:150]}"
                     await harness.chat_post(room="swarm_dev", content=chat_msg)
-                    print(f"    {GREEN}✅ Delegated task {task_id} result streamed back to {sender}{RESET}")
+                    print(f"    {GREEN}✅ Delegated task {task['task_id']} {status}; result sent to {sender}{RESET}")
 
                 elif action == "exec_shell":
                     cmd = data.get("cmd") or ""
