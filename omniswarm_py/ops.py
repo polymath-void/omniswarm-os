@@ -21,6 +21,12 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
+if sys.platform == 'win32':
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 from omniswarm_py.governance import GovernanceError, TaskLedger, TASK_ACTION, RESULT_ACTION
 from omniswarm_py.mesh_config import load_mesh_config
 
