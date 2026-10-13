@@ -51,3 +51,11 @@ tasks_*.json
 # Deployed build artifacts (runtime, not source)
 builds/
 .phone_agent.lock
+
+# Shared Artifacts & Delegated Tasks
+shared_artifacts/
+runtime_manager/
+runtime-manager.*
+scratch_chrome/
+.omnios/
+
