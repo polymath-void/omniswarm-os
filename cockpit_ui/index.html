@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OmniSwarm Cockpit — Cybernetic Swarm Operations HUD</title>
+  <title>OmniSwarm Cockpit — Swarm Virtual Office & Operations HUD</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
   <!-- React 18 & Babel Standalone for Instant Zero-Build Portability -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -12,27 +12,44 @@
 
   <style>
     :root {
-      --bg-primary: #06090e;
-      --bg-secondary: #0b111a;
-      --bg-card: #121926;
-      --bg-card-hover: #172132;
-      --border-color: #1e293b;
-      --border-light: #2d3d57;
+      color-scheme: dark;
+      accent-color: #06b6d4;
+
+      /* Cyber Dark Colors */
+      --bg-primary: #05080e;
+      --bg-secondary: #090e17;
+      --bg-card: #0e1524;
+      --bg-card-hover: #141f33;
+      --bg-terminal: #020409;
+      --border-color: #1b263b;
+      --border-light: #283852;
+      --border-glow: rgba(6, 182, 212, 0.4);
+
+      /* Typography */
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
-      --text-muted: #64748b;
+      --text-muted: #57657a;
+
+      /* Neon Cyber Accents */
       --cyan-neon: #06b6d4;
-      --cyan-glow: rgba(6, 182, 212, 0.25);
+      --cyan-glow: rgba(6, 182, 212, 0.35);
       --green-neon: #10b981;
-      --green-glow: rgba(16, 185, 129, 0.25);
+      --green-glow: rgba(16, 185, 129, 0.35);
       --purple-neon: #a855f7;
-      --purple-glow: rgba(168, 85, 247, 0.25);
+      --purple-glow: rgba(168, 85, 247, 0.35);
       --amber-neon: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.35);
       --red-neon: #ef4444;
+      --blue-neon: #38bdf8;
+      --indigo-neon: #6366f1;
+
+      /* Font Families */
       --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background-color: var(--bg-primary);
       color: var(--text-primary);
@@ -42,18 +59,30 @@
       height: 100vh;
       width: 100vw;
       user-select: none;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.03) 0%, transparent 40%);
     }
+
     #root { height: 100vh; display: flex; flex-direction: column; }
 
-    /* Performance Scrollbars */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--cyan-neon); }
+    /* Modern Standard Scrollbars */
+    * {
+      scrollbar-color: rgba(6, 182, 212, 0.3) rgba(5, 8, 14, 0.6);
+      scrollbar-width: thin;
+    }
+
+    /* Legacy WebKit Scrollbars */
+    @supports not (scrollbar-color: auto) {
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: rgba(5, 8, 14, 0.6); }
+      ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--cyan-neon); }
+    }
 
     /* Top Matrix Header */
     .matrix-header {
-      height: 48px;
+      height: 50px;
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
       display: flex;
@@ -63,7 +92,8 @@
       font-family: var(--font-mono);
       font-size: 12px;
       flex-shrink: 0;
-      z-index: 10;
+      z-index: 100;
+      position: relative;
     }
     .header-brand {
       display: flex;
@@ -74,8 +104,11 @@
     }
     .brand-glow {
       color: var(--cyan-neon);
-      text-shadow: 0 0 12px var(--cyan-glow);
+      text-shadow: 0 0 14px var(--cyan-glow);
       font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .status-badge {
       display: inline-flex;
@@ -101,17 +134,27 @@
       height: 7px;
       border-radius: 50%;
       background: currentColor;
+      box-shadow: 0 0 6px currentColor;
     }
+    .pulse-dot {
+      animation: pulseAnimation 2s infinite;
+    }
+    @keyframes pulseAnimation {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
     .header-tools {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .btn-action {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
-      padding: 5px 12px;
+      padding: 5px 11px;
       border-radius: 6px;
       font-size: 11px;
       cursor: pointer;
@@ -124,41 +167,115 @@
     .btn-action:hover {
       border-color: var(--cyan-neon);
       background: var(--bg-card-hover);
+      color: var(--cyan-neon);
     }
-    .btn-action.primary {
+    .btn-action.active {
       background: rgba(6, 182, 212, 0.15);
       border-color: var(--cyan-neon);
       color: var(--cyan-neon);
     }
+    .btn-fullscreen {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-fullscreen:hover {
+      color: var(--cyan-neon);
+      border-color: var(--cyan-neon);
+      background: rgba(6, 182, 212, 0.1);
+    }
 
-    /* 3-Column Responsive Layout */
+    /* 3-Column Cockpit Layout */
     .cockpit-body {
       flex: 1;
       display: grid;
-      grid-template-columns: 280px 1fr 340px;
+      grid-template-columns: 320px 1fr 400px;
       overflow: hidden;
       background: var(--bg-primary);
+      position: relative;
     }
-    @media (max-width: 950px) {
+    @media (max-width: 1120px) {
       .cockpit-body {
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr auto;
       }
     }
 
-    /* Left Sidebar: Host & Edge Vitals */
+    /* Card Panels & Containers */
+    .panel-container {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .panel-header {
+      height: 40px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+      text-transform: uppercase;
+    }
+
+    /* Fullscreen Modal View Mode for Every Card */
+    .card-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 9999 !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      background: var(--bg-primary) !important;
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+      animation: fsFadeIn 0.18s ease-out;
+    }
+    @keyframes fsFadeIn {
+      from { opacity: 0; transform: scale(0.99); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Left Column: Agents Office & Vitals */
     .left-sidebar {
       background: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
-      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      overflow: hidden;
+    }
+    .sidebar-scrollable {
+      flex: 1;
       overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .section-title {
       font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--text-muted);
@@ -167,27 +284,145 @@
       justify-content: space-between;
       margin-bottom: 6px;
     }
+
+    /* Agent Office Workstation Cards */
+    .office-desk-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 11px 13px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      min-height: fit-content;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .office-desk-card:hover {
+      border-color: var(--border-light);
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+    .office-desk-card.active-filter {
+      border-color: var(--cyan-neon);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+    .office-desk-card.desk-agy { border-left: 3px solid var(--purple-neon); }
+    .office-desk-card.desk-pc { border-left: 3px solid var(--cyan-neon); }
+    .office-desk-card.desk-phone { border-left: 3px solid var(--green-neon); }
+    .office-desk-card.desk-comp { border-left: 3px solid var(--amber-neon); }
+    .office-desk-card.desk-ui { border-left: 3px solid var(--blue-neon); }
+
+    .desk-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .desk-agent-name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .desk-role-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: inline-block;
+      width: fit-content;
+    }
+    .desk-status-pill {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .desk-status-online { background: rgba(16, 185, 129, 0.15); color: var(--green-neon); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .desk-status-busy { background: rgba(168, 85, 247, 0.15); color: var(--purple-neon); border: 1px solid rgba(168, 85, 247, 0.3); }
+    .desk-status-standby { background: rgba(245, 158, 11, 0.15); color: var(--amber-neon); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .desk-body {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+    .desk-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .desk-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .desk-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .desk-btn:hover {
+      background: var(--border-color);
+      color: var(--cyan-neon);
+      border-color: var(--cyan-neon);
+    }
+
+    /* Hardware Vitals Card */
     .vitals-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 12px;
-      font-size: 12px;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
     .vital-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
+      align-items: flex-start;
+      gap: 8px;
     }
-    .vital-label { color: var(--text-secondary); font-size: 11px; }
-    .vital-val { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
+    .vital-label { color: var(--text-secondary); font-size: 11px; flex-shrink: 0; }
+    .vital-val {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: right;
+      word-break: break-word;
+      font-size: 11px;
+      max-width: 65%;
+    }
     .meter-bar {
       height: 5px;
-      background: #06090e;
+      background: #020408;
       border-radius: 3px;
       overflow: hidden;
-      margin-top: 3px;
+      margin-top: 2px;
     }
     .meter-fill {
       height: 100%;
@@ -196,33 +431,38 @@
       transition: width 0.3s ease;
     }
 
-    /* Center Panel: Dialogue Stream */
-    .chat-panel {
+    /* Center Panel: Office Views & Dialogue */
+    .center-panel {
+      background: var(--bg-primary);
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background: var(--bg-primary);
       position: relative;
     }
-    .room-tabs-bar {
+    .center-sub-tabs {
       height: 40px;
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
-      padding: 0 14px;
-      gap: 8px;
+      justify-content: space-between;
+      padding: 0 12px;
       flex-shrink: 0;
+    }
+    .tab-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       overflow-x: auto;
     }
-    .room-tab {
+    .center-tab-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
       padding: 5px 12px;
       border-radius: 6px;
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -230,53 +470,87 @@
       transition: all 0.15s ease;
       white-space: nowrap;
     }
-    .room-tab.active {
+    .center-tab-btn.active {
       background: var(--bg-card);
       color: var(--text-primary);
       font-weight: 600;
       border: 1px solid var(--border-color);
     }
-    .room-tab.active.agy { color: var(--purple-neon); border-color: var(--purple-neon); }
-    .room-tab.active.pc { color: var(--cyan-neon); border-color: var(--cyan-neon); }
-    .room-tab.active.phone { color: var(--green-neon); border-color: var(--green-neon); }
+    .center-tab-btn.active.graph { color: var(--cyan-neon); border-color: var(--cyan-neon); }
+    .center-tab-btn.active.chat { color: var(--purple-neon); border-color: var(--purple-neon); }
 
-    /* Messages List (No Lag) */
-    .messages-viewport {
+    /* Canvas Graph View */
+    .graph-viewport {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #0d1624 0%, #05080e 85%);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .graph-hud-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(9, 14, 23, 0.88);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(10px);
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .graph-tooltip {
+      position: absolute;
+      background: rgba(14, 21, 36, 0.95);
+      border: 1px solid var(--cyan-neon);
+      box-shadow: 0 0 16px var(--cyan-glow);
+      backdrop-filter: blur(12px);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      pointer-events: none;
+      z-index: 20;
+      min-width: 180px;
+      transform: translate(-50%, -115%);
+    }
+
+    /* Dialogue Stream */
+    .dialogue-viewport {
       flex: 1;
       overflow-y: auto;
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 12px;
-      contain: layout style;
     }
     .msg-card {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 14px;
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       transition: border-color 0.15s ease;
       user-select: text;
     }
-    .msg-card:hover {
-      border-color: var(--border-light);
-    }
+    .msg-card:hover { border-color: var(--border-light); }
     .msg-card.agy {
       border-left: 3px solid var(--purple-neon);
-      background: linear-gradient(90deg, rgba(168, 85, 247, 0.04) 0%, var(--bg-secondary) 100%);
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.05) 0%, var(--bg-secondary) 100%);
     }
     .msg-card.pc {
       border-left: 3px solid var(--cyan-neon);
-      background: linear-gradient(90deg, rgba(6, 182, 212, 0.04) 0%, var(--bg-secondary) 100%);
+      background: linear-gradient(90deg, rgba(6, 182, 212, 0.05) 0%, var(--bg-secondary) 100%);
     }
     .msg-card.phone {
       border-left: 3px solid var(--green-neon);
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.04) 0%, var(--bg-secondary) 100%);
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-secondary) 100%);
     }
-
     .msg-meta-row {
       display: flex;
       align-items: center;
@@ -287,7 +561,7 @@
     .msg-identity {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       font-weight: 600;
     }
     .msg-identity.agy { color: var(--purple-neon); }
@@ -301,25 +575,24 @@
       font-size: 10px;
       color: var(--text-muted);
     }
-    .msg-time { color: var(--text-muted); }
     .msg-text-content {
       font-size: 13px;
       color: var(--text-primary);
       white-space: pre-wrap;
       word-break: break-word;
-      line-height: 1.5;
+      line-height: 1.45;
     }
 
-    /* Generative UI Dynamic Cards */
+    /* Generative UI Inspect Elements */
     .card-diff-container {
       background: #020408;
       border: 1px solid #1e293b;
       border-radius: 6px;
-      padding: 10px;
+      padding: 8px 10px;
       font-family: var(--font-mono);
       font-size: 11px;
       overflow-x: auto;
-      max-height: 220px;
+      max-height: 200px;
     }
     .diff-line-add { color: #34d399; background: rgba(16, 185, 129, 0.08); }
     .diff-line-del { color: #f87171; background: rgba(239, 68, 68, 0.08); }
@@ -328,14 +601,13 @@
       background: #020408;
       border: 1px solid #1e293b;
       border-radius: 6px;
-      padding: 10px;
+      padding: 8px 10px;
       font-family: var(--font-mono);
       font-size: 11px;
       color: #38bdf8;
       overflow-x: auto;
-      max-height: 180px;
+      max-height: 160px;
     }
-
     .action-chips-wrapper {
       display: flex;
       flex-wrap: wrap;
@@ -346,9 +618,9 @@
       background: var(--bg-card);
       border: 1px solid var(--border-light);
       color: var(--text-secondary);
-      padding: 3px 9px;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 10px;
       cursor: pointer;
       font-family: var(--font-mono);
       transition: all 0.15s ease;
@@ -362,25 +634,7 @@
       border-color: var(--cyan-neon);
     }
 
-    /* Floating Jump Button */
-    .jump-bottom-btn {
-      position: absolute;
-      bottom: 60px;
-      right: 20px;
-      background: var(--cyan-neon);
-      color: #040609;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      padding: 6px 14px;
-      border-radius: 20px;
-      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4);
-      cursor: pointer;
-      border: none;
-      z-index: 20;
-    }
-
-    /* Right Panel: Workflow & Ops Stream */
+    /* Right Column: Workflow Intent & Realtime Ops Terminal */
     .right-sidebar {
       background: var(--bg-secondary);
       border-left: 1px solid var(--border-color);
@@ -388,49 +642,175 @@
       flex-direction: column;
       overflow: hidden;
     }
+
+    /* Active Workflow Intent Box (Compact Cyber Style) */
     .workflow-box {
-      padding: 14px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--border-color);
       flex-shrink: 0;
+      background: rgba(14, 21, 36, 0.4);
     }
     .pill-status {
       display: inline-block;
-      padding: 2px 8px;
+      padding: 1px 7px;
       border-radius: 4px;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
       font-family: var(--font-mono);
       text-transform: uppercase;
-      margin-bottom: 6px;
     }
-    .pill-pending { background: rgba(245, 158, 11, 0.15); color: var(--amber-neon); }
-    .pill-running { background: rgba(6, 182, 212, 0.15); color: var(--cyan-neon); }
-    .pill-completed { background: rgba(16, 185, 129, 0.15); color: var(--green-neon); }
+    .pill-pending { background: rgba(245, 158, 11, 0.15); color: var(--amber-neon); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .pill-running { background: rgba(6, 182, 212, 0.15); color: var(--cyan-neon); border: 1px solid rgba(6, 182, 212, 0.3); }
+    .pill-completed { background: rgba(16, 185, 129, 0.15); color: var(--green-neon); border: 1px solid rgba(16, 185, 129, 0.3); }
 
-    .ops-box {
+    /* Ops Terminal & Logs Analysis */
+    .ops-panel {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      padding: 14px;
+      position: relative;
     }
-    .ops-terminal {
+    .ops-controls-bar {
+      padding: 8px 12px;
+      background: rgba(14, 21, 36, 0.6);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .ops-filter-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ops-search-input {
       flex: 1;
-      background: #020408;
+      background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 8px;
+      color: var(--text-primary);
+      padding: 5px 9px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .ops-search-input:focus { border-color: var(--cyan-neon); }
+    .ops-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .ops-export-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .ops-export-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--cyan-neon);
+      border-color: var(--cyan-neon);
+    }
+
+    /* Terminal Viewport (Bottom-Pinned Latest Task) */
+    .ops-terminal-viewport {
+      flex: 1;
+      background: var(--bg-terminal);
       overflow-y: auto;
+      padding: 12px;
       font-family: var(--font-mono);
       font-size: 11px;
       display: flex;
       flex-direction: column;
       gap: 4px;
+      position: relative;
+      scroll-padding: 12px;
     }
-    .log-item { display: flex; gap: 6px; line-height: 1.35; }
+    .log-load-more {
+      align-self: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 10px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: all 0.15s ease;
+    }
+    .log-load-more:hover {
+      color: var(--cyan-neon);
+      border-color: var(--cyan-neon);
+    }
+    .log-item-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      line-height: 1.4;
+      word-break: break-all;
+      padding: 2px 6px;
+      border-radius: 3px;
+      transition: background 0.15s ease;
+    }
+    .log-item-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .log-item-row.latest-task {
+      background: rgba(6, 182, 212, 0.09);
+      border-left: 3px solid var(--cyan-neon);
+      padding-left: 6px;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.12);
+    }
+    .log-time { color: var(--text-muted); font-size: 10px; flex-shrink: 0; }
+    .log-agent { font-weight: 600; flex-shrink: 0; }
+    .log-level-badge { font-weight: 700; flex-shrink: 0; }
     .log-INFO { color: var(--green-neon); }
     .log-WARN { color: var(--amber-neon); }
     .log-ERROR { color: var(--red-neon); }
+
+    /* Non-Interrupting Scroll Notification Floating Pill */
+    .new-logs-float-pill {
+      position: absolute;
+      bottom: 14px;
+      right: 16px;
+      background: rgba(6, 182, 212, 0.95);
+      color: #020408;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 20px;
+      box-shadow: 0 4px 16px rgba(6, 182, 212, 0.45);
+      cursor: pointer;
+      border: none;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      animation: bouncePill 1.5s infinite;
+    }
+    @keyframes bouncePill {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
 
     /* Bottom Command Bar */
     .bottom-command-bar {
@@ -442,6 +822,7 @@
       padding: 0 14px;
       gap: 8px;
       flex-shrink: 0;
+      z-index: 100;
     }
     .input-target {
       background: var(--bg-card);
@@ -463,6 +844,7 @@
       font-family: var(--font-mono);
       font-size: 12px;
       outline: none;
+      transition: border-color 0.15s ease;
     }
     .input-cmd:focus { border-color: var(--cyan-neon); }
     .btn-send {
@@ -475,31 +857,542 @@
       font-family: var(--font-mono);
       font-size: 12px;
       cursor: pointer;
+      transition: all 0.15s ease;
     }
+    .btn-send:hover { opacity: 0.9; transform: translateY(-1px); }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
+    // Agent Office Metadata Definitions
+    const AGENTS_META = [
+      {
+        id: "Antigravity",
+        name: "Antigravity Brain",
+        role: "Cognitive Architect",
+        color: "#a855f7",
+        dept: "Master Planner & Deep Reasoner",
+        icon: "🧠",
+        status: "Reasoning",
+        desc: "Cognitive mind orchestrating multi-node intelligence & strategic execution.",
+        coords: { x: 0.5, y: 0.16 }
+      },
+      {
+        id: "PCAgent",
+        name: "PCAgent (Host Kernel)",
+        role: "Host Operations & Governor",
+        color: "#06b6d4",
+        dept: "Windows Orchestrator & ZMQ Hub",
+        icon: "🖥️",
+        status: "Governing",
+        desc: "Root governance daemon, ZeroMQ 5565 RPC mesh, and process controller.",
+        coords: { x: 0.5, y: 0.52 }
+      },
+      {
+        id: "PhoneAgent-Termux",
+        name: "PhoneAgent (Edge)",
+        role: "Android Edge Operator",
+        color: "#10b981",
+        dept: "Mobile Edge Node (OpenCode/Termux)",
+        icon: "📱",
+        status: "Edge Online",
+        desc: "Android Termux edge node operating on Nothing Phone (2a).",
+        coords: { x: 0.18, y: 0.82 }
+      },
+      {
+        id: "ComputeRes",
+        name: "ComputeRes OS",
+        role: "WASM & Semantic Search",
+        color: "#f59e0b",
+        dept: "FastEmbed & Vector Arena",
+        icon: "⚡",
+        status: "Ready",
+        desc: "High-performance embedding engine (:57161) and WASM sandbox.",
+        coords: { x: 0.82, y: 0.82 }
+      },
+      {
+        id: "CockpitUI",
+        name: "Cockpit Console",
+        role: "Operator Interface",
+        color: "#38bdf8",
+        dept: "Zero-Token Telemetry Bridge",
+        icon: "🛰️",
+        status: "Streaming",
+        desc: "Real-time SSE event listener & generative-UI action dispatcher (:8765).",
+        coords: { x: 0.82, y: 0.24 }
+      }
+    ];
+
+    const MESH_LINKS = [
+      { from: "Antigravity", to: "PCAgent", protocol: "ZMQ RPC :5565", active: true, color: "#a855f7" },
+      { from: "PCAgent", to: "PhoneAgent-Termux", protocol: "WebRTC P2P DataChannel", active: true, color: "#10b981" },
+      { from: "PCAgent", to: "ComputeRes", protocol: "FastEmbed Gateway :57161", active: true, color: "#f59e0b" },
+      { from: "CockpitUI", to: "PCAgent", protocol: "SSE Stream :8765", active: true, color: "#38bdf8" },
+      { from: "PhoneAgent-Termux", to: "ComputeRes", protocol: "P2P State Sync", active: false, color: "#64748b" }
+    ];
+
+    // ==========================================
+    // Interactive Agent Collaboration Graph Component
+    // ==========================================
+    function AgentCollaborationGraph({ selectedAgent, onSelectAgent, nodeStatus, telemetry }) {
+      const canvasRef = useRef(null);
+      const [hoveredNode, setHoveredNode] = useState(null);
+      const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        let animationFrameId;
+
+        // Particle System for Active Packets
+        const particles = [];
+        for (let i = 0; i < 28; i++) {
+          const link = MESH_LINKS[i % MESH_LINKS.length];
+          particles.push({
+            link,
+            progress: Math.random(),
+            speed: 0.003 + Math.random() * 0.004,
+            size: 2.5 + Math.random() * 2
+          });
+        }
+
+        const resizeCanvas = () => {
+          const rect = canvas.parentElement.getBoundingClientRect();
+          canvas.width = rect.width * window.devicePixelRatio;
+          canvas.height = rect.height * window.devicePixelRatio;
+          ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        };
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+
+        let time = 0;
+
+        const render = () => {
+          time += 0.03;
+          const rect = canvas.parentElement.getBoundingClientRect();
+          const w = rect.width;
+          const h = rect.height;
+
+          ctx.clearRect(0, 0, w, h);
+
+          // Subtle Background Mesh / Orbit Rings
+          ctx.save();
+          ctx.strokeStyle = "rgba(6, 182, 212, 0.04)";
+          ctx.lineWidth = 1;
+          const cx = w * 0.5;
+          const cy = h * 0.52;
+          ctx.beginPath();
+          ctx.arc(cx, cy, h * 0.36, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cx, cy, h * 0.22, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          // 1. Draw Mesh Links
+          MESH_LINKS.forEach((link) => {
+            const source = AGENTS_META.find((a) => a.id === link.from);
+            const target = AGENTS_META.find((a) => a.id === link.to);
+            if (!source || !target) return;
+
+            const x1 = source.coords.x * w;
+            const y1 = source.coords.y * h;
+            const x2 = target.coords.x * w;
+            const y2 = target.coords.y * h;
+
+            // Link Line with Glow
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = link.active ? "rgba(6, 182, 212, 0.22)" : "rgba(30, 41, 59, 0.4)";
+            ctx.lineWidth = link.active ? 2 : 1;
+            ctx.stroke();
+
+            // Link Label (Protocol) with pill background
+            const mx = (x1 + x2) / 2;
+            const my = (y1 + y2) / 2;
+            const labelText = link.protocol;
+            ctx.font = "9px ui-monospace, monospace";
+            const textWidth = ctx.measureText(labelText).width;
+
+            ctx.fillStyle = "rgba(5, 8, 14, 0.75)";
+            ctx.fillRect(mx - textWidth / 2 - 4, my - 13, textWidth + 8, 14);
+
+            ctx.fillStyle = link.active ? "rgba(148, 163, 184, 0.85)" : "rgba(100, 116, 139, 0.5)";
+            ctx.textAlign = "center";
+            ctx.fillText(labelText, mx, my - 2);
+          });
+
+          // 2. Animate Traveling Packets (Particles)
+          particles.forEach((p) => {
+            if (!p.link.active) return;
+            p.progress += p.speed;
+            if (p.progress > 1) p.progress = 0;
+
+            const source = AGENTS_META.find((a) => a.id === p.link.from);
+            const target = AGENTS_META.find((a) => a.id === p.link.to);
+            if (!source || !target) return;
+
+            const px = (source.coords.x + (target.coords.x - source.coords.x) * p.progress) * w;
+            const py = (source.coords.y + (target.coords.y - source.coords.y) * p.progress) * h;
+
+            ctx.beginPath();
+            ctx.arc(px, py, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.link.color || "#06b6d4";
+            ctx.shadowColor = p.link.color || "#06b6d4";
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          });
+
+          // 3. Draw Agent Nodes
+          AGENTS_META.forEach((agent) => {
+            const nx = agent.coords.x * w;
+            const ny = agent.coords.y * h;
+            const isSelected = selectedAgent === agent.id;
+            const isHovered = hoveredNode?.id === agent.id;
+            const radius = isSelected ? 28 : (isHovered ? 26 : 22);
+
+            // Pulse Ring
+            const pulse = (Math.sin(time + agent.coords.x * 10) + 1) / 2;
+            ctx.beginPath();
+            ctx.arc(nx, ny, radius + 4 + pulse * 6, 0, Math.PI * 2);
+            ctx.strokeStyle = agent.color + "44";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Outer Ring
+            ctx.beginPath();
+            ctx.arc(nx, ny, radius, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? agent.color + "33" : "#0b121e";
+            ctx.strokeStyle = isSelected ? "#ffffff" : agent.color;
+            ctx.lineWidth = isSelected ? 3 : 2;
+            ctx.shadowColor = agent.color;
+            ctx.shadowBlur = isSelected ? 20 : 10;
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Icon / Emoji
+            ctx.font = "16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(agent.icon, nx, ny);
+
+            // Agent Label Below Node
+            ctx.font = "bold 11px ui-monospace, monospace";
+            ctx.fillStyle = isSelected ? "#38bdf8" : "#f8fafc";
+            ctx.fillText(agent.name.split(" ")[0], nx, ny + radius + 14);
+
+            ctx.font = "9px ui-monospace, monospace";
+            ctx.fillStyle = "#94a3b8";
+            ctx.fillText(agent.role, nx, ny + radius + 26);
+          });
+
+          animationFrameId = requestAnimationFrame(render);
+        };
+
+        render();
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+          window.removeEventListener("resize", resizeCanvas);
+        };
+      }, [selectedAgent, hoveredNode]);
+
+      const handleMouseMove = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const found = AGENTS_META.find((a) => {
+          const nx = a.coords.x * rect.width;
+          const ny = a.coords.y * rect.height;
+          const dist = Math.hypot(mx - nx, my - ny);
+          return dist < 32;
+        });
+
+        if (found) {
+          setHoveredNode(found);
+          setTooltipPos({ x: mx, y: my });
+        } else {
+          setHoveredNode(null);
+        }
+      };
+
+      const handleClick = (e) => {
+        if (hoveredNode) {
+          onSelectAgent(hoveredNode.id === selectedAgent ? "all" : hoveredNode.id);
+        }
+      };
+
+      return (
+        <div className="graph-viewport" onMouseMove={handleMouseMove} onClick={handleClick}>
+          <div className="graph-hud-overlay">
+            <span style={{ color: "var(--cyan-neon)", fontWeight: 700 }}>⚡ COLLABORATION MESH TOPOLOGY</span>
+            <span style={{ color: "var(--text-muted)", marginLeft: "8px" }}>5 Active Nodes | ZeroMQ + WebRTC P2P</span>
+          </div>
+
+          <canvas ref={canvasRef} style={{ width: "100%", height: "100%", cursor: hoveredNode ? "pointer" : "default" }} />
+
+          {hoveredNode && (
+            <div className="graph-tooltip" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
+              <div style={{ color: hoveredNode.color, fontWeight: 700, fontSize: "12px", marginBottom: "4px" }}>
+                {hoveredNode.icon} {hoveredNode.name}
+              </div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "10px", marginBottom: "3px" }}>
+                Role: {hoveredNode.role}
+              </div>
+              <div style={{ color: "var(--green-neon)", fontSize: "10px" }}>
+                Status: {hoveredNode.status}
+              </div>
+              <div style={{ color: "var(--text-muted)", fontSize: "9px", marginTop: "4px" }}>
+                Click to filter dialogue & logs
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // Realtime Ops Stream Dashboard Component
+    // ==========================================
+    function OpsStreamTerminal({
+      logs = [],
+      totalLogs = 0,
+      filterAgent,
+      setFilterAgent,
+      filterLevel,
+      setFilterLevel,
+      searchQuery,
+      setSearchQuery,
+      onLoadEarlierLogs,
+      hasMoreHistory,
+      isFullscreen,
+      onToggleFullscreen
+    }) {
+      const terminalRef = useRef(null);
+      const isPinnedToBottomRef = useRef(true);
+      const [newLogsCount, setNewLogsCount] = useState(0);
+      const prevLogsLengthRef = useRef(logs.length);
+
+      // Handle user scroll - detect if user scrolled up
+      const handleScroll = () => {
+        const el = terminalRef.current;
+        if (!el) return;
+        const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 35;
+        isPinnedToBottomRef.current = isAtBottom;
+        if (isAtBottom) {
+          setNewLogsCount(0);
+        }
+      };
+
+      // Smart Scroll Anchoring: Only pin to bottom if user is already at bottom!
+      // If user has scrolled up, do NOT interrupt user scrolling. Show floating pill.
+      useEffect(() => {
+        const el = terminalRef.current;
+        if (!el) return;
+
+        const diff = logs.length - prevLogsLengthRef.current;
+        prevLogsLengthRef.current = logs.length;
+
+        if (diff > 0) {
+          if (isPinnedToBottomRef.current) {
+            el.scrollTop = el.scrollHeight;
+            setNewLogsCount(0);
+          } else {
+            // User is looking at previous logs, do not jerk scroll position
+            setNewLogsCount((prev) => prev + diff);
+          }
+        }
+      }, [logs]);
+
+      const scrollToBottom = () => {
+        const el = terminalRef.current;
+        if (el) {
+          el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+          isPinnedToBottomRef.current = true;
+          setNewLogsCount(0);
+        }
+      };
+
+      // Export handlers
+      const exportLogsJSON = () => {
+        window.open("/api/logs?format=export_json&limit=all", "_blank");
+      };
+
+      const exportLogsCSV = () => {
+        window.open("/api/logs?format=csv&limit=all", "_blank");
+      };
+
+      return (
+        <div className={`ops-panel ${isFullscreen ? "card-fullscreen" : ""}`}>
+          <div className="panel-header">
+            <div className="panel-title">
+              <span>🖥️ Realtime Ops Stream</span>
+              <span style={{ color: "var(--cyan-neon)", fontSize: "10px" }}>
+                ({logs.length} / {totalLogs || logs.length})
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <button className="ops-export-btn" onClick={exportLogsJSON} title="Export all logs to JSON">
+                💾 JSON
+              </button>
+              <button className="ops-export-btn" onClick={exportLogsCSV} title="Export all logs to CSV">
+                📊 CSV
+              </button>
+              <button className="btn-fullscreen" onClick={onToggleFullscreen} title="Toggle Fullscreen">
+                {isFullscreen ? "✕ Exit" : "⛶ Fullscreen"}
+              </button>
+            </div>
+          </div>
+
+          {/* Ops Filter & Search Controls */}
+          <div className="ops-controls-bar">
+            <input
+              type="text"
+              className="ops-search-input"
+              placeholder="Search ops logs message or keyword..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="ops-filter-row">
+              <select
+                className="ops-select"
+                style={{ flex: 1 }}
+                value={filterAgent}
+                onChange={(e) => setFilterAgent(e.target.value)}
+              >
+                <option value="all">Agent: All</option>
+                <option value="PCAgent">PCAgent</option>
+                <option value="PhoneAgent">PhoneAgent</option>
+                <option value="Antigravity">Antigravity</option>
+                <option value="SyntyTester">SyntyTester</option>
+              </select>
+              <select
+                className="ops-select"
+                style={{ width: "100px" }}
+                value={filterLevel}
+                onChange={(e) => setFilterLevel(e.target.value)}
+              >
+                <option value="all">Level: All</option>
+                <option value="INFO">INFO</option>
+                <option value="WARN">WARN</option>
+                <option value="ERROR">ERROR</option>
+              </select>
+              {(searchQuery || filterAgent !== "all" || filterLevel !== "all") && (
+                <button
+                  className="ops-export-btn"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setFilterAgent("all");
+                    setFilterLevel("all");
+                  }}
+                  title="Reset Filters"
+                >
+                  ✕ Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Terminal Viewport */}
+          <div className="ops-terminal-viewport" ref={terminalRef} onScroll={handleScroll}>
+            {hasMoreHistory && (
+              <button className="log-load-more" onClick={onLoadEarlierLogs}>
+                ↑ Load Earlier 100 Logs from SQLite
+              </button>
+            )}
+
+            {logs.length === 0 ? (
+              <div style={{ color: "var(--text-muted)", textAlign: "center", marginTop: "40px" }}>
+                No log entries matching current criteria.
+              </div>
+            ) : (
+              logs.map((l, index) => {
+                const isLast = index === logs.length - 1;
+                const level = l.log_level || l.level || "INFO";
+                const timeStr = l.timestamp ? new Date(l.timestamp * 1000).toLocaleTimeString() : "";
+
+                return (
+                  <div key={l.id || index} className={`log-item-row ${isLast ? "latest-task" : ""}`}>
+                    <span className="log-time">[{timeStr}]</span>
+                    <span className={`log-level-badge log-${level}`}>[{level}]</span>
+                    <span className="log-agent" style={{ color: "var(--text-secondary)" }}>
+                      [{l.agent_id || "Hub"}]:
+                    </span>
+                    <span style={{ color: isLast ? "var(--cyan-neon)" : "var(--text-primary)", fontWeight: isLast ? "600" : "normal" }}>
+                      {l.message}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Non-interrupting scroll floating notification */}
+            {newLogsCount > 0 && (
+              <button className="new-logs-float-pill" onClick={scrollToBottom}>
+                <span>↓ {newLogsCount} New Log{newLogsCount > 1 ? "s" : ""}</span>
+                <span style={{ opacity: 0.8, fontSize: "10px" }}>(Jump to Latest)</span>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // Main Cockpit App Component
+    // ==========================================
     function CockpitApp() {
       const [state, setState] = useState({
         messages: [],
         logs: [],
         workflow: null,
         telemetry: {},
-        node_status: {}
+        node_status: {},
+        stats: { total_logs: 0, total_messages: 0 }
       });
-      const [activeTab, setActiveTab] = useState("agy_pc"); // Default to exact Antigravity <-> PCAgent dialogue
+
+      // View & Filter States
+      const [centerView, setCenterView] = useState("graph"); // "graph" | "chat"
+      const [activeTab, setActiveTab] = useState("agy_pc");
       const [targetPeer, setTargetPeer] = useState("PCAgent");
       const [cmdText, setCmdText] = useState("");
-      const [autoScroll, setAutoScroll] = useState(false);
-      const [showJumpBtn, setShowJumpBtn] = useState(false);
       const [isSending, setIsSending] = useState(false);
-      const scrollViewportRef = useRef(null);
-      const prevMsgCountRef = useRef(0);
+      const [selectedAgent, setSelectedAgent] = useState("all");
+
+      // Fullscreen State for each panel
+      const [fullscreenPanel, setFullscreenPanel] = useState(null); // 'office' | 'center' | 'ops' | null
+
+      // Ops Stream filtering and history states
+      const [opsSearch, setOpsSearch] = useState("");
+      const [opsFilterAgent, setOpsFilterAgent] = useState("all");
+      const [opsFilterLevel, setOpsFilterLevel] = useState("all");
+      const [historicalLogs, setHistoricalLogs] = useState([]);
+      const [historyOffset, setHistoryOffset] = useState(0);
+      const [hasMoreHistory, setHasMoreHistory] = useState(true);
+
+      const dialogueViewportRef = useRef(null);
+
+      // Keyboard Esc to exit fullscreen
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.key === "Escape") {
+            setFullscreenPanel(null);
+          }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+      }, []);
 
       // SSE Connection (Zero Tokens)
       useEffect(() => {
@@ -513,29 +1406,20 @@
         return () => es.close();
       }, []);
 
-      // Smart Scroll Handler (Zero Jank / Stutter)
-      const handleScroll = () => {
-        const el = scrollViewportRef.current;
-        if (!el) return;
-        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        setShowJumpBtn(!isNearBottom);
+      // Load earlier logs from SQLite
+      const loadEarlierLogs = async () => {
+        try {
+          const nextOffset = historyOffset + 100;
+          const res = await fetch(`/api/logs?limit=100&offset=${nextOffset}&order=asc`);
+          const data = await res.json();
+          if (data.logs && data.logs.length > 0) {
+            setHistoricalLogs((prev) => [...data.logs, ...prev]);
+            setHistoryOffset(nextOffset);
+          } else {
+            setHasMoreHistory(false);
+          }
+        } catch (e) {}
       };
-
-      // Perform scroll only when autoScroll is toggled ON or user jumps
-      const scrollToBottom = () => {
-        const el = scrollViewportRef.current;
-        if (el) {
-          el.scrollTop = el.scrollHeight;
-          setShowJumpBtn(false);
-        }
-      };
-
-      useEffect(() => {
-        if (autoScroll) {
-          const el = scrollViewportRef.current;
-          if (el) el.scrollTop = el.scrollHeight;
-        }
-      }, [state.messages, autoScroll]);
 
       // API Actions
       const sendAction = async (payload) => {
@@ -562,326 +1446,422 @@
         }
       };
 
-      // Exact Message Filtering
+      // Filtered Ops Logs (Chronological: Oldest at Top, Newest at Bottom)
+      const allLogs = useMemo(() => {
+        const combined = [...historicalLogs, ...(state.logs || [])];
+        // Sort chronologically ascending
+        return combined.sort((a, b) => (a.id || 0) - (b.id || 0));
+      }, [historicalLogs, state.logs]);
+
+      const filteredLogs = useMemo(() => {
+        return allLogs.filter((l) => {
+          if (opsFilterAgent !== "all" && !(l.agent_id || "").toLowerCase().includes(opsFilterAgent.toLowerCase())) {
+            return false;
+          }
+          if (opsFilterLevel !== "all" && (l.log_level || l.level || "").toUpperCase() !== opsFilterLevel.toUpperCase()) {
+            return false;
+          }
+          if (opsSearch.trim() && !l.message?.toLowerCase().includes(opsSearch.toLowerCase())) {
+            return false;
+          }
+          return true;
+        });
+      }, [allLogs, opsFilterAgent, opsFilterLevel, opsSearch]);
+
+      // Filtered Messages
       const messages = state.messages || [];
-      const filtered = messages.filter((m) => {
-        const s = (m.sender || "").toLowerCase();
-        const r = (m.recipient || "").toLowerCase();
-        if (activeTab === "all") return true;
-        if (activeTab === "agy_pc") {
-          // Exact Antigravity <-> PCAgent dialogue
-          return (s.includes("antigravity") && r.includes("pc")) ||
-                 (s.includes("pc") && r.includes("antigravity"));
-        }
-        if (activeTab === "phone_pc") {
-          // Exact PhoneAgent <-> PCAgent dialogue
-          return (s.includes("phone") && r.includes("pc")) ||
-                 (s.includes("pc") && r.includes("phone"));
-        }
-        if (activeTab === "swarm_dev") {
-          return m.room === "swarm_dev" || r === "*" || m.message?.startsWith("[swarm_dev]");
-        }
-        return true;
-      });
+      const filteredMessages = useMemo(() => {
+        return messages.filter((m) => {
+          const s = (m.sender || "").toLowerCase();
+          const r = (m.recipient || "").toLowerCase();
+          if (selectedAgent !== "all") {
+            const targetLower = selectedAgent.toLowerCase();
+            return s.includes(targetLower) || r.includes(targetLower);
+          }
+          if (activeTab === "all") return true;
+          if (activeTab === "agy_pc") {
+            return (s.includes("antigravity") && r.includes("pc")) ||
+                   (s.includes("pc") && r.includes("antigravity"));
+          }
+          if (activeTab === "phone_pc") {
+            return (s.includes("phone") && r.includes("pc")) ||
+                   (s.includes("pc") && r.includes("phone"));
+          }
+          if (activeTab === "swarm_dev") {
+            return m.room === "swarm_dev" || r === "*" || m.message?.startsWith("[swarm_dev]");
+          }
+          return true;
+        });
+      }, [messages, activeTab, selectedAgent]);
 
       const node = state.node_status || {};
       const telem = state.telemetry || {};
       const battery = telem.battery || {};
       const isOnline = node.pc_hub_reachable;
+      const totalLogsCount = state.stats?.total_logs || allLogs.length;
 
       return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Top Matrix Header */}
           <header className="matrix-header">
             <div className="header-brand">
-              <span className="brand-glow">⚡ OMNISWARM COCKPIT</span>
+              <span className="brand-glow">
+                <span>⚡</span>
+                <span>OMNISWARM VIRTUAL HQ</span>
+              </span>
               <div className={`status-badge ${isOnline ? "" : "offline"}`}>
-                <span className="status-dot"></span>
-                {isOnline ? "HUB ONLINE" : "HUB OFFLINE"}
+                <span className="status-dot pulse-dot"></span>
+                {isOnline ? "SWARM ACTIVE" : "HUB OFFLINE"}
               </div>
               {node.rtt_ms && (
                 <span style={{ color: "var(--cyan-neon)" }}>RTT: {node.rtt_ms}ms</span>
               )}
-              <span style={{ color: "var(--text-muted)" }}>Host: {telem.is_windows ? "PC Windows" : "Android Edge"}</span>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                Host: {telem.is_windows ? "PC Windows" : "Android Edge"}
+              </span>
             </div>
 
             <div className="header-tools">
-              <button 
-                className={`btn-action ${autoScroll ? "primary" : ""}`}
-                onClick={() => setAutoScroll(!autoScroll)}
-              >
-                📜 Auto-Scroll: {autoScroll ? "ON" : "OFF"}
-              </button>
-
-              <button 
+              <button
                 className="btn-action"
                 onClick={() => sendAction({ target: "PCAgent", message: "ping", data: { action: "ping" } })}
               >
-                🚀 Ping PC
+                🚀 Ping Host
+              </button>
+              <button
+                className="btn-action"
+                onClick={() => sendAction({ target: "PhoneAgent-Termux", message: "ping", data: { action: "ping" } })}
+              >
+                📱 Ping Phone
               </button>
             </div>
           </header>
 
-          {/* Main 3-Column Layout */}
+          {/* 3-Column Main Dashboard Layout */}
           <main className="cockpit-body">
-            {/* Left Column: Vitals */}
-            <aside className="left-sidebar">
-              <div className="section-title">
-                <span>📊 Host Hardware Vitals</span>
-              </div>
-              <div className="vitals-card">
-                <div className="vital-row">
-                  <span className="vital-label">Host Device:</span>
-                  <span className="vital-val">{telem.device_model || "Host"}</span>
+            {/* Left Column: Agents Office Floor & Hardware Vitals */}
+            <aside className={`left-sidebar ${fullscreenPanel === "office" ? "card-fullscreen" : ""}`}>
+              <div className="panel-header">
+                <div className="panel-title">
+                  <span>🏢 Agents Office Floor</span>
                 </div>
-                <div className="vital-row">
-                  <span className="vital-label">Processor SoC:</span>
-                  <span className="vital-val" style={{ fontSize: "10px" }}>{telem.soc || "Multi-Core"}</span>
-                </div>
-                {battery.percentage !== undefined && (
-                  <>
-                    <div className="vital-row" style={{ marginTop: "6px" }}>
-                      <span className="vital-label">Battery Level:</span>
-                      <span className="vital-val">{battery.percentage}%</span>
-                    </div>
-                    <div className="meter-bar">
-                      <div className="meter-fill" style={{ width: `${battery.percentage}%` }}></div>
-                    </div>
-                  </>
-                )}
-                <div className="vital-row" style={{ marginTop: "8px" }}>
-                  <span className="vital-label">Memory Used:</span>
-                  <span className="vital-val">{telem.ram_used_percent || 0}%</span>
-                </div>
-                <div className="meter-bar">
-                  <div className="meter-fill" style={{ width: `${telem.ram_used_percent || 0}%` }}></div>
-                </div>
-                <div className="vital-row" style={{ marginTop: "4px" }}>
-                  <span className="vital-label">RAM Free:</span>
-                  <span className="vital-val">{telem.ram_available_mb || 0} MB</span>
-                </div>
+                <button
+                  className="btn-fullscreen"
+                  onClick={() => setFullscreenPanel(fullscreenPanel === "office" ? null : "office")}
+                >
+                  {fullscreenPanel === "office" ? "✕ Exit" : "⛶ Fullscreen"}
+                </button>
               </div>
 
-              <div className="section-title">
-                <span>🤖 Swarm Fleet Entities</span>
-              </div>
-              <div className="vitals-card" style={{ fontSize: "11px" }}>
-                <div className="vital-row">
-                  <span className="vital-label">🧠 Antigravity:</span>
-                  <span className="vital-val" style={{ color: "var(--purple-neon)" }}>Cognitive Brain</span>
+              <div className="sidebar-scrollable">
+                <div className="section-title">
+                  <span>Workstations ({AGENTS_META.length})</span>
+                  {selectedAgent !== "all" && (
+                    <span
+                      style={{ color: "var(--cyan-neon)", cursor: "pointer" }}
+                      onClick={() => setSelectedAgent("all")}
+                    >
+                      Clear Filter ✕
+                    </span>
+                  )}
                 </div>
-                <div className="vital-row">
-                  <span className="vital-label">🖥️ PCAgent:</span>
-                  <span className="vital-val" style={{ color: "var(--cyan-neon)" }}>PC Coordinator</span>
-                </div>
-                <div className="vital-row">
-                  <span className="vital-label">📱 PhoneAgent:</span>
-                  <span className="vital-val" style={{ color: "var(--green-neon)" }}>Edge Node</span>
-                </div>
-              </div>
 
-              <div className="section-title">
-                <span>⚡ Quick Directives</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <button className="btn-action" onClick={() => sendAction({ target: "PCAgent", message: "health", data: { action: "health_check" } })}>
-                  📊 PC Health Check
-                </button>
-                <button className="btn-action" onClick={() => sendAction({ target: "PhoneAgent-Termux", message: "exec:git status -s" })}>
-                  📋 Phone Git Status
-                </button>
-                <button className="btn-action" onClick={() => sendAction({ target: "PCAgent", message: "exec:git log -n 1 --oneline" })}>
-                  📜 PC Git Log
-                </button>
+                {/* Office Desk Workstations */}
+                {AGENTS_META.map((agent) => {
+                  const isFiltered = selectedAgent === agent.id;
+                  let deskClass = "desk-pc";
+                  if (agent.id === "Antigravity") deskClass = "desk-agy";
+                  else if (agent.id === "PhoneAgent-Termux") deskClass = "desk-phone";
+                  else if (agent.id === "ComputeRes") deskClass = "desk-comp";
+                  else if (agent.id === "CockpitUI") deskClass = "desk-ui";
+
+                  return (
+                    <div
+                      key={agent.id}
+                      className={`office-desk-card ${deskClass} ${isFiltered ? "active-filter" : ""}`}
+                      onClick={() => setSelectedAgent(isFiltered ? "all" : agent.id)}
+                    >
+                      <div className="desk-header">
+                        <div className="desk-agent-name" style={{ color: agent.color }}>
+                          <span>{agent.icon}</span>
+                          <span>{agent.name}</span>
+                        </div>
+                        <span className="desk-status-pill desk-status-online">
+                          <span className="status-dot"></span> {agent.status}
+                        </span>
+                      </div>
+                      <div className="desk-role-badge">{agent.role}</div>
+                      <div className="desk-body">{agent.desc}</div>
+                      <div className="desk-meta">
+                        <span>Dept: {agent.dept}</span>
+                      </div>
+                      <div className="desk-actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="desk-btn"
+                          onClick={() => {
+                            setTargetPeer(agent.id);
+                            document.querySelector(".input-cmd")?.focus();
+                          }}
+                        >
+                          ✉ Address
+                        </button>
+                        <button
+                          className="desk-btn"
+                          onClick={() => {
+                            setOpsFilterAgent(agent.id);
+                          }}
+                        >
+                          📋 Logs
+                        </button>
+                        <button
+                          className="desk-btn"
+                          onClick={() => sendAction({ target: agent.id, message: "ping" })}
+                        >
+                          ▶ Ping
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Hardware Vitals */}
+                <div className="section-title" style={{ marginTop: "8px" }}>
+                  <span>📊 Fleet Hardware Vitals</span>
+                </div>
+                <div className="vitals-card">
+                  <div className="vital-row">
+                    <span className="vital-label">Host Device:</span>
+                    <span className="vital-val">{telem.device_model || "PC Host"}</span>
+                  </div>
+                  <div className="vital-row">
+                    <span className="vital-label">Processor:</span>
+                    <span className="vital-val" style={{ fontSize: "10px", lineHeight: "1.3" }}>
+                      {telem.soc || "Multi-Core"}
+                    </span>
+                  </div>
+                  {battery.percentage !== undefined && (
+                    <>
+                      <div className="vital-row" style={{ marginTop: "4px" }}>
+                        <span className="vital-label">Phone Battery:</span>
+                        <span className="vital-val">{battery.percentage}%</span>
+                      </div>
+                      <div className="meter-bar">
+                        <div className="meter-fill" style={{ width: `${battery.percentage}%` }}></div>
+                      </div>
+                    </>
+                  )}
+                  <div className="vital-row" style={{ marginTop: "6px" }}>
+                    <span className="vital-label">Memory Usage:</span>
+                    <span className="vital-val">{telem.ram_used_percent || 0}%</span>
+                  </div>
+                  <div className="meter-bar">
+                    <div className="meter-fill" style={{ width: `${telem.ram_used_percent || 0}%` }}></div>
+                  </div>
+                  <div className="vital-row" style={{ marginTop: "4px" }}>
+                    <span className="vital-label">Free RAM:</span>
+                    <span className="vital-val">{telem.ram_available_mb || 0} MB</span>
+                  </div>
+                </div>
               </div>
             </aside>
 
-            {/* Center Column: Formatted Exact Chat */}
-            <section className="chat-panel">
-              {/* Room & Conversation Selector Tabs */}
-              <div className="room-tabs-bar">
-                <button 
-                  className={`room-tab agy ${activeTab === "agy_pc" ? "active" : ""}`}
-                  onClick={() => setActiveTab("agy_pc")}
+            {/* Center Column: Interactive Graph OR Dialogue Stream */}
+            <section className={`center-panel ${fullscreenPanel === "center" ? "card-fullscreen" : ""}`}>
+              <div className="center-sub-tabs">
+                <div className="tab-group">
+                  <button
+                    className={`center-tab-btn graph ${centerView === "graph" ? "active" : ""}`}
+                    onClick={() => setCenterView("graph")}
+                  >
+                    🌐 Collaboration Topology Graph
+                  </button>
+                  <button
+                    className={`center-tab-btn chat ${centerView === "chat" ? "active" : ""}`}
+                    onClick={() => setCenterView("chat")}
+                  >
+                    💬 Dialogue Stream ({filteredMessages.length})
+                  </button>
+                </div>
+                <button
+                  className="btn-fullscreen"
+                  onClick={() => setFullscreenPanel(fullscreenPanel === "center" ? null : "center")}
                 >
-                  🧠 Antigravity ↔ PCAgent
-                </button>
-                <button 
-                  className={`room-tab phone ${activeTab === "phone_pc" ? "active" : ""}`}
-                  onClick={() => setActiveTab("phone_pc")}
-                >
-                  📱 PhoneAgent ↔ PCAgent
-                </button>
-                <button 
-                  className={`room-tab ${activeTab === "swarm_dev" ? "active" : ""}`}
-                  onClick={() => setActiveTab("swarm_dev")}
-                >
-                  📡 Room: swarm_dev
-                </button>
-                <button 
-                  className={`room-tab ${activeTab === "all" ? "active" : ""}`}
-                  onClick={() => setActiveTab("all")}
-                >
-                  🌐 All Messages ({messages.length})
+                  {fullscreenPanel === "center" ? "✕ Exit" : "⛶ Fullscreen"}
                 </button>
               </div>
 
-              {/* Viewport */}
-              <div 
-                className="messages-viewport" 
-                ref={scrollViewportRef}
-                onScroll={handleScroll}
-              >
-                {filtered.length === 0 ? (
-                  <div style={{ textAlign: "center", color: "var(--text-muted)", marginTop: "40px", fontFamily: "var(--font-mono)" }}>
-                    No messages in this channel yet.
+              {centerView === "graph" ? (
+                <AgentCollaborationGraph
+                  selectedAgent={selectedAgent}
+                  onSelectAgent={setSelectedAgent}
+                  nodeStatus={node}
+                  telemetry={telem}
+                />
+              ) : (
+                <div className="dialogue-viewport" ref={dialogueViewportRef}>
+                  {/* Room Filters */}
+                  <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
+                    <button
+                      className={`btn-action ${activeTab === "agy_pc" ? "active" : ""}`}
+                      onClick={() => setActiveTab("agy_pc")}
+                    >
+                      🧠 Antigravity ↔ PCAgent
+                    </button>
+                    <button
+                      className={`btn-action ${activeTab === "phone_pc" ? "active" : ""}`}
+                      onClick={() => setActiveTab("phone_pc")}
+                    >
+                      📱 PhoneAgent ↔ PCAgent
+                    </button>
+                    <button
+                      className={`btn-action ${activeTab === "swarm_dev" ? "active" : ""}`}
+                      onClick={() => setActiveTab("swarm_dev")}
+                    >
+                      📡 Room: swarm_dev
+                    </button>
+                    <button
+                      className={`btn-action ${activeTab === "all" ? "active" : ""}`}
+                      onClick={() => setActiveTab("all")}
+                    >
+                      🌐 All ({messages.length})
+                    </button>
                   </div>
-                ) : (
-                  filtered.map((m, idx) => {
-                    const sender = m.sender || "Unknown";
-                    const isAGY = sender.includes("Antigravity");
-                    const isPC = sender.includes("PC");
-                    const roleClass = isAGY ? "agy" : (isPC ? "pc" : "phone");
-                    const icon = isAGY ? "🧠" : (isPC ? "🖥️" : "📱");
-                    const text = m.message || m.content || "";
-                    const data = m.data || {};
 
-                    return (
-                      <div key={m.id || idx} className={`msg-card ${roleClass}`}>
-                        <div className="msg-meta-row">
-                          <div className={`msg-identity ${roleClass}`}>
-                            <span>{icon}</span>
-                            <span>{sender}</span>
-                            {m.recipient && (
-                              <span className="badge-route">➔ {m.recipient}</span>
-                            )}
-                          </div>
-                          <span className="msg-time">
-                            {m.timestamp ? new Date(m.timestamp * 1000).toLocaleTimeString() : ""}
-                          </span>
-                        </div>
+                  {filteredMessages.length === 0 ? (
+                    <div style={{ textAlign: "center", color: "var(--text-muted)", marginTop: "40px", fontFamily: "var(--font-mono)" }}>
+                      No messages recorded in this channel yet.
+                    </div>
+                  ) : (
+                    filteredMessages.map((m, idx) => {
+                      const sender = m.sender || "Unknown";
+                      const isAGY = sender.includes("Antigravity");
+                      const isPC = sender.includes("PC");
+                      const roleClass = isAGY ? "agy" : (isPC ? "pc" : "phone");
+                      const icon = isAGY ? "🧠" : (isPC ? "🖥️" : "📱");
+                      const text = m.message || m.content || "";
+                      const data = m.data || {};
 
-                        <div className="msg-text-content">{text}</div>
-
-                        {/* Generative UI: Diff Inspector */}
-                        {(data.diff || text.includes("diff --git") || text.includes("@@")) && (
-                          <div className="card-diff-container">
-                            <div style={{ color: "var(--text-muted)", marginBottom: "4px" }}>📄 Git Diff Stream</div>
-                            {(data.diff || text).split("\n").map((line, li) => (
-                              <div key={li} className={line.startsWith("+") ? "diff-line-add" : (line.startsWith("-") ? "diff-line-del" : "")}>
-                                {line}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Generative UI: Shell Output */}
-                        {(data.stdout || data.stderr || text.startsWith("Command '")) && (
-                          <div className="card-terminal-container">
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                              <span>🖥️ Execution Result {data.returncode !== undefined ? `(Exit: ${data.returncode})` : ""}</span>
-                              <span>{data.success ? "✅ SUCCESS" : "⚠️ NOTICE"}</span>
+                      return (
+                        <div key={m.id || idx} className={`msg-card ${roleClass}`}>
+                          <div className="msg-meta-row">
+                            <div className={`msg-identity ${roleClass}`}>
+                              <span>{icon}</span>
+                              <span>{sender}</span>
+                              {m.recipient && <span className="badge-route">➔ {m.recipient}</span>}
                             </div>
-                            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                              {data.stdout || data.stderr || "Output logged."}
-                            </pre>
+                            <span style={{ color: "var(--text-muted)" }}>
+                              {m.timestamp ? new Date(m.timestamp * 1000).toLocaleTimeString() : ""}
+                            </span>
                           </div>
-                        )}
 
-                        {/* Generative UI: Smart Action Chips */}
-                        <div className="action-chips-wrapper">
-                          <span className="chip-btn" onClick={() => sendAction({ target: sender, message: "ping", data: { action: "ping" } })}>
-                            ▶ Ping Node
-                          </span>
-                          <span className="chip-btn" onClick={() => sendAction({ target: sender, message: "health", data: { action: "health_check" } })}>
-                            ▶ Query Health
-                          </span>
+                          <div className="msg-text-content">{text}</div>
+
+                          {/* Generative UI: Git Diff Inspector */}
+                          {(data.diff || text.includes("diff --git") || text.includes("@@")) && (
+                            <div className="card-diff-container">
+                              <div style={{ color: "var(--text-muted)", marginBottom: "4px" }}>📄 Git Diff Stream</div>
+                              {(data.diff || text).split("\n").map((line, li) => (
+                                <div key={li} className={line.startsWith("+") ? "diff-line-add" : (line.startsWith("-") ? "diff-line-del" : "")}>
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Generative UI: Execution Output */}
+                          {(data.stdout || data.stderr || text.startsWith("Command '")) && (
+                            <div className="card-terminal-container">
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                <span>🖥️ Execution Result {data.returncode !== undefined ? `(Exit: ${data.returncode})` : ""}</span>
+                                <span>{data.success ? "✅ SUCCESS" : "⚠️ NOTICE"}</span>
+                              </div>
+                              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                                {data.stdout || data.stderr || "Output logged."}
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* Smart Action Chips */}
+                          <div className="action-chips-wrapper">
+                            <span className="chip-btn" onClick={() => sendAction({ target: sender, message: "ping" })}>
+                              ▶ Ping Node
+                            </span>
+                            <span className="chip-btn" onClick={() => { setTargetPeer(sender); document.querySelector(".input-cmd")?.focus(); }}>
+                              ✉ Reply
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Jump to Latest Floating Button */}
-              {showJumpBtn && (
-                <button className="jump-bottom-btn" onClick={scrollToBottom}>
-                  ↓ Jump to Latest
-                </button>
+                      );
+                    })
+                  )}
+                </div>
               )}
             </section>
 
-            {/* Right Column: Active Workflow & Real-Time Ops Stream */}
+            {/* Right Column: Active Workflow & Realtime Ops Terminal */}
             <aside className="right-sidebar">
-              {/* Workflow Pipeline */}
+              {/* Active Workflow Intent (Sleek Compact Widget) */}
               <div className="workflow-box">
-                <div className="section-title">
-                  <span>⚡ Active Workflow Intent</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    ⚡ Active Workflow Intent
+                  </span>
+                  <span className={`pill-status pill-${state.workflow?.status || "pending"}`}>
+                    {state.workflow?.status || "STANDBY"}
+                  </span>
                 </div>
-                {state.workflow ? (
-                  <div className="vitals-card">
-                    <span className={`pill-status pill-${state.workflow.status || 'pending'}`}>
-                      {state.workflow.status || "Pending"}
-                    </span>
-                    <div style={{ fontSize: "12px", fontWeight: "600", marginBottom: "4px" }}>
-                      {state.workflow.intent || "No intent text"}
-                    </div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                      Task ID: {state.workflow.task_id || "N/A"}<br/>
-                      Source: {state.workflow.source || "PCAgent"}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                    No pending tasks in workflow.json
+                <div style={{ fontSize: "11px", fontWeight: "600", color: state.workflow ? "var(--text-primary)" : "var(--text-muted)" }}>
+                  {state.workflow?.intent || "No pending autonomous intent"}
+                </div>
+                {state.workflow && (
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
+                    Task: {state.workflow.task_id || "N/A"} | Src: {state.workflow.source || "PCAgent"}
                   </div>
                 )}
               </div>
 
-              {/* Real-Time Ops Terminal */}
-              <div className="ops-box">
-                <div className="section-title">
-                  <span>🖥️ Real-time Ops Stream</span>
-                  <span>{state.logs?.length || 0}</span>
-                </div>
-                <div className="ops-terminal">
-                  {(state.logs || []).map((l, i) => (
-                    <div key={l.id || i} className="log-item">
-                      <span className={`log-${l.log_level || l.level || 'INFO'}`}>
-                        [{l.log_level || l.level || 'INFO'}]
-                      </span>
-                      <span style={{ color: "var(--text-muted)" }}>[{l.agent_id}]</span>
-                      <span style={{ color: "var(--text-primary)" }}>{l.message}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Realtime Ops Terminal (Bottom Log Pinned + Smart Non-Interrupting Scroll) */}
+              <OpsStreamTerminal
+                logs={filteredLogs}
+                totalLogs={totalLogsCount}
+                filterAgent={opsFilterAgent}
+                setFilterAgent={setOpsFilterAgent}
+                filterLevel={opsFilterLevel}
+                setFilterLevel={setOpsFilterLevel}
+                searchQuery={opsSearch}
+                setSearchQuery={setOpsSearch}
+                onLoadEarlierLogs={loadEarlierLogs}
+                hasMoreHistory={hasMoreHistory}
+                isFullscreen={fullscreenPanel === "ops"}
+                onToggleFullscreen={() => setFullscreenPanel(fullscreenPanel === "ops" ? null : "ops")}
+              />
             </aside>
           </main>
 
           {/* Bottom Command Bar */}
           <footer className="bottom-command-bar">
-            <select 
+            <select
               className="input-target"
-              value={targetPeer} 
+              value={targetPeer}
               onChange={(e) => setTargetPeer(e.target.value)}
             >
-              <option value="PCAgent">Target: PCAgent</option>
+              <option value="PCAgent">Target: PCAgent (Host)</option>
               <option value="Antigravity">Target: Antigravity Brain</option>
-              <option value="PhoneAgent-Termux">Target: PhoneAgent</option>
-              <option value="swarm_dev">Room: swarm_dev</option>
+              <option value="PhoneAgent-Termux">Target: PhoneAgent (Edge)</option>
+              <option value="ComputeRes">Target: ComputeRes OS</option>
+              <option value="swarm_dev">Room: swarm_dev (Broadcast)</option>
             </select>
 
             <form onSubmit={handleFormSubmit} style={{ display: "flex", flex: 1, gap: "8px" }}>
               <input
                 type="text"
                 className="input-cmd"
-                placeholder="Enter directive or message to dispatch over ZMQ..."
+                placeholder={`Dispatch directive to ${targetPeer} over ZeroMQ mesh...`}
                 value={cmdText}
                 onChange={(e) => setCmdText(e.target.value)}
               />
               <button type="submit" className="btn-send" disabled={isSending}>
-                {isSending ? "..." : "🚀 SEND"}
+                {isSending ? "..." : "⚡ DISPATCH"}
               </button>
             </form>
           </footer>

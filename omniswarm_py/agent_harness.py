@@ -344,3 +344,23 @@ class OmniOSAgentHarness:
             "latest_log_id": res.get("latest_log_id", 0)
         }
 
+    # =========================================================================
+    # ComputeRes Shared Compute Methods
+    # =========================================================================
+
+    async def compute_execute(self, code: str, args: Optional[Dict[str, Any]] = None, timeout: float = 15.0) -> Dict[str, Any]:
+        """Executes dynamic Python code inside ComputeRes sandbox on the PC host."""
+        return await self.execute_in_swarm("compute_res_execute", {"code": code, "args": args or {}}, timeout=timeout)
+
+    async def compute_embed(self, input_data: Any, timeout: float = 10.0) -> Dict[str, Any]:
+        """Generates 384-dimensional embeddings via ComputeRes FastEmbed model engine on the PC."""
+        return await self.execute_in_swarm("compute_res_embed", {"input": input_data}, timeout=timeout)
+
+    async def compute_status(self, timeout: float = 5.0) -> Dict[str, Any]:
+        """Queries ComputeRes shared engine status, active skills, and broker ports."""
+        return await self.execute_in_swarm("compute_res_status", {}, timeout=timeout)
+
+    async def compute_invoke_skill(self, skill_name: str, args: Optional[Dict[str, Any]] = None, timeout: float = 15.0) -> Dict[str, Any]:
+        """Executes an evolved skill on ComputeRes."""
+        return await self.execute_in_swarm("publish_skill", {"skill_name": skill_name, "action": "execute", "skill_args": args or {}}, timeout=timeout)
+

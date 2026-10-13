@@ -164,6 +164,10 @@ class OmniOSRootKernel:
             self.mesh.register_tool(name="query_holographic_ast", schema={"parameters": {"intent": "string"}})
         if "Execution" in self.branches and self.branches["Execution"]:
             self.mesh.register_tool(name="query_skills", schema={"parameters": {"query": "string"}})
+            self.mesh.register_tool(name="publish_skill", schema={"parameters": {"skill_name": "string", "action": "string"}})
+            self.mesh.register_tool(name="compute_res_execute", schema={"parameters": {"code": "string", "args": "object"}})
+            self.mesh.register_tool(name="compute_res_embed", schema={"parameters": {"input": "any"}})
+            self.mesh.register_tool(name="compute_res_status", schema={"parameters": {}})
         if "Time" in self.branches and self.branches["Time"]:
             self.mesh.register_tool(name="jage_sync_ast", schema={"parameters": {}})
             
@@ -215,6 +219,12 @@ class OmniOSRootKernel:
                 }
             if tool_name in ["query_skills", "publish_skill", "adapt_and_publish_skill"] and "Execution" in self.branches:
                 return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "SKILL_ROUTER_INVOKE", "args": args})
+            if tool_name in ["compute_res_execute", "execute_dynamic_python"] and "Execution" in self.branches:
+                return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "EXECUTE_DYNAMIC", "args": args})
+            if tool_name in ["compute_res_embed", "compute_res_inference"] and "Execution" in self.branches:
+                return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "AI_MODEL_COMPUTE", "args": args})
+            if tool_name == "compute_res_status" and "Execution" in self.branches:
+                return await self.branches["Execution"].dispatch_intent(b"Mesh-Client", {"type": "STATUS", "args": args})
             if tool_name == "query_holographic_ast" and "Cognition" in self.branches:
                 # Wrap sync call in asyncio to thread or execute directly
                 return {"status": "success", "results": self.branches["Cognition"].semantic_search(args.get("intent", ""), args.get("top_k", 3))}

@@ -14,11 +14,10 @@ import platform
 import subprocess
 from typing import Dict, Any, Optional
 
-if sys.stdout.encoding != 'utf-8':
-    try:
-        sys.stdout.reconfigure(encoding='utf-8')
-    except Exception:
-        pass
+try:
+    sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
+except Exception:
+    pass
 
 if sys.platform == 'win32':
     try:
@@ -31,6 +30,7 @@ sys.path.append(SCRIPT_DIR)
 
 from omniswarm_py.agent_harness import OmniOSAgentHarness
 from omniswarm_py.mesh_config import load_mesh_config
+from omniswarm_py.governance import summarize_result, build_result_data, TASK_ACTION
 
 CYAN = "\033[96m"
 GREEN = "\033[92m"
@@ -39,7 +39,8 @@ MAGENTA = "\033[95m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-AGENT_ID = "PCAgent"
+is_loop = "--loop-only" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "loop")
+AGENT_ID = "PCAgent" if is_loop else f"PCAgent-CLI-{os.getpid()}"
 
 async def dispatch_directive_and_wait(
     harness: OmniOSAgentHarness,
@@ -153,7 +154,15 @@ async def execute_pc_local_shell(command: str) -> Dict[str, Any]:
     """Safely executes a shell command on the PC and captures stdout/stderr."""
     def _run():
         try:
-            res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
+            res = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=120
+            )
             return {
                 "stdout": res.stdout,
                 "stderr": res.stderr,
@@ -181,8 +190,8 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
     await harness.post_agent_log(f"PC Agent entering Zero-HIL Loop on {device_info['device_type']}")
     await harness.send_agent_message("PhoneAgent-Termux", "PCAgent is online in Autonomous Mode. Ready for tasks.", data=device_info)
 
-    initial_messages = await harness.read_my_messages(since_id=0, limit=50)
-    last_msg_id = max([m["id"] for m in initial_messages], default=0)
+    latest_ids = await harness.get_latest_ids()
+    last_msg_id = latest_ids.get("latest_message_id", 0)
 
     heartbeat_interval = 45.0
     last_heartbeat = time.time()
@@ -222,7 +231,27 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
                         action = "echo"
 
                 # Dispatch Action
-                if action == "exec_shell":
+                if action == TASK_ACTION or action == "delegated_exec" or data.get("action") == TASK_ACTION:
+                    task_id = data.get("task_id") or f"task_{int(time.time()*1000)}"
+                    cmd = data.get("cmd") or ""
+                    print(f"    {YELLOW}▶ [Governance] Executing Delegated Task {task_id} from {sender}:{RESET} {cmd}")
+                    await harness.post_agent_log(f"PC Executing Delegated Task {task_id}: {cmd}")
+                    exec_result = await execute_pc_local_shell(cmd)
+                    summary = summarize_result(exec_result)
+                    status = "completed" if summary.get("success") else "failed"
+
+                    await harness.post_agent_log(f"Task {task_id} [{status}]: {(summary.get('stdout') or summary.get('stderr') or '')[:100]}")
+                    res_data = build_result_data(task_id, status, summary)
+                    await harness.send_agent_message(
+                        recipient=sender,
+                        message=f"Task {task_id} {status}",
+                        data=res_data
+                    )
+                    chat_msg = f"✅ [PCAgent] Delegated task {task_id} {status}: stdout={(summary.get('stdout') or summary.get('stderr') or '').strip()[:150]}"
+                    await harness.chat_post(room="swarm_dev", content=chat_msg)
+                    print(f"    {GREEN}✅ Delegated task {task_id} result streamed back to {sender}{RESET}")
+
+                elif action == "exec_shell":
                     cmd = data.get("cmd") or ""
                     print(f"    {YELLOW}▶ Executing Shell Command on PC:{RESET} {cmd}")
                     await harness.post_agent_log(f"PC Executing: {cmd}")
@@ -280,12 +309,22 @@ async def run_autonomous_loop(harness: OmniOSAgentHarness):
                     )
                     print(f"    {GREEN}✅ Pong sent to {sender}{RESET}")
 
+                elif (
+                    text.startswith("Acknowledged:")
+                    or text.startswith("Command '")
+                    or text.startswith("PONG")
+                    or text.startswith("Task ")
+                    or text.startswith("Result [")
+                    or data.get("action") in ["ack", "task_result"]
+                ):
+                    print(f"    {GREEN}ℹ️ Handled response from {sender}: {text[:80]}{RESET}")
+
                 else:
                     reply_text = f"Acknowledged: '{text}'. Ready for directives."
                     await harness.send_agent_message(
                         recipient=sender,
                         message=reply_text,
-                        data={"handled_at": time.time()}
+                        data={"handled_at": time.time(), "action": "ack"}
                     )
                     print(f"    {GREEN}✅ Acknowledged to {sender}{RESET}")
 
@@ -316,6 +355,11 @@ async def main():
         print("  python pc_agent.py logs [limit]                   # View recent swarm logs")
         print("  python pc_agent.py watch                          # Continuous live stream of swarm logs")
         print("  python pc_agent.py test                           # Test autonomous handshake with PhoneAgent")
+        print("  python pc_agent.py compute <python_code>          # Shared Compute: Execute dynamic code via ComputeRes")
+        print("  python pc_agent.py embed <text>                   # Shared Compute: FastEmbed embeddings via ComputeRes")
+        print("  python pc_agent.py compute-status                 # Shared Compute: View ComputeRes OS & Model status")
+        print("  python pc_agent.py skills                         # List evolved skills in ComputeRes registry")
+        print("  python pc_agent.py run-skill <name> [args_json]   # Execute ComputeRes evolved skill")
         return
 
     cmd = args[0]
@@ -390,6 +434,45 @@ async def main():
 
         elif cmd == "watch":
             await live_log_watcher(harness)
+
+        elif cmd == "compute":
+            code = " ".join(args[1:]) if len(args) > 1 else "def run(**kwargs):\n    return {'status': 'ok'}"
+            print(f"\n{CYAN}>>> [ComputeRes] Dispatching dynamic Python code to PC sandbox...{RESET}")
+            res = await harness.compute_execute(code=code)
+            print(f"\n{GREEN}--- ComputeRes Execution Output ---{RESET}")
+            print(json.dumps(res, indent=2))
+
+        elif cmd == "embed":
+            text = " ".join(args[1:]) if len(args) > 1 else "OmniSwarm ComputeRes Integration"
+            print(f"\n{CYAN}>>> [ComputeRes] Requesting FastEmbed embeddings for: '{text}'...{RESET}")
+            res = await harness.compute_embed(input_data=text)
+            print(f"\n{GREEN}--- ComputeRes Embedding Result ---{RESET}")
+            print(f"Model: {res.get('model')} | Dimension: {res.get('dimension')} | Time: {res.get('compute_time_ms')}ms")
+            if res.get("embeddings"):
+                sample = res["embeddings"][0][:5]
+                print(f"Sample Vector (first 5 values): {sample}...")
+
+        elif cmd in ["compute-status", "status-compute"]:
+            print(f"\n{CYAN}>>> Querying ComputeRes OS status...{RESET}")
+            res = await harness.compute_status()
+            print(f"\n{GREEN}--- ComputeRes Shared Engine Status ---{RESET}")
+            print(json.dumps(res, indent=2))
+
+        elif cmd == "skills":
+            print(f"\n{CYAN}>>> Querying ComputeRes SkillsHub registry...{RESET}")
+            res = await harness.execute_in_swarm("query_skills", {"query": "all"})
+            skills = res.get("skills_found", [])
+            print(f"\n{GREEN}--- ComputeRes Skills ({len(skills)}) ---{RESET}")
+            for s in skills:
+                print(f"  • {s}")
+
+        elif cmd == "run-skill":
+            skill_name = args[1] if len(args) > 1 else "sys_cpu_info.py"
+            skill_args = json.loads(args[2]) if len(args) > 2 else {}
+            print(f"\n{CYAN}>>> Executing ComputeRes skill: {skill_name}...{RESET}")
+            res = await harness.compute_invoke_skill(skill_name, skill_args)
+            print(f"\n{GREEN}--- Skill Result ---{RESET}")
+            print(json.dumps(res, indent=2))
 
         elif cmd == "test":
             print(f"\n{CYAN}======================================================={RESET}")

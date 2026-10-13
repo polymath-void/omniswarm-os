@@ -15,6 +15,9 @@ import asyncio
 import platform
 import threading
 import subprocess
+import urllib.parse
+import csv
+import io
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from typing import Dict, Any, List
@@ -150,41 +153,72 @@ async def async_poller():
             swarm_msgs = []
             logs = []
 
+            # 1. Direct SQLite WAL Querying (Instant, Robust, Zero-Network Fallback)
+            db_candidates = [
+                os.path.join(SCRIPT_DIR, "agy_nodeos.db"),
+                os.path.join(os.path.dirname(SCRIPT_DIR), "agy_nodeos.db")
+            ]
+            db_file = next((f for f in db_candidates if os.path.exists(f)), None)
+
+            total_logs_count = 0
+            total_msgs_count = 0
+
+            if db_file:
+                try:
+                    import sqlite3
+                    conn = sqlite3.connect(db_file, timeout=5.0)
+                    cur = conn.cursor()
+
+                    # Total counts
+                    try:
+                        cur.execute("SELECT count(*) FROM swarm_logs")
+                        total_logs_count = cur.fetchone()[0]
+                        cur.execute("SELECT count(*) FROM swarm_messages")
+                        total_msgs_count = cur.fetchone()[0]
+                    except Exception:
+                        pass
+
+                    # Fetch recent messages (up to 150)
+                    cur.execute("SELECT id, sender, recipient, message, data, timestamp FROM swarm_messages ORDER BY id DESC LIMIT 150")
+                    rows = cur.fetchall()
+                    for r in reversed(rows):
+                        try:
+                            data_obj = json.loads(r[4]) if r[4] else {}
+                        except Exception:
+                            data_obj = {}
+                        swarm_msgs.append({
+                            "id": r[0],
+                            "sender": r[1],
+                            "recipient": r[2],
+                            "message": r[3],
+                            "data": data_obj,
+                            "timestamp": r[5]
+                        })
+
+                    # Fetch recent operational logs (up to 200)
+                    cur.execute("SELECT id, agent_id, log_level, message, timestamp FROM swarm_logs ORDER BY id DESC LIMIT 200")
+                    log_rows = cur.fetchall()
+                    for r in reversed(log_rows):
+                        logs.append({
+                            "id": r[0],
+                            "agent_id": r[1],
+                            "log_level": r[2],
+                            "message": r[3],
+                            "timestamp": r[4]
+                        })
+                    conn.close()
+                except Exception as dbe:
+                    pass
+
+            # 2. In-Memory SyntyChat Enrichment (if ZMQ Hub is online)
             if node_status.get("pc_hub_reachable"):
                 try:
                     if harness is None:
-                        harness = OmniOSAgentHarness(agent_id="CockpitMonitor")
+                        harness = OmniOSAgentHarness(agent_id="CockpitMonitor", host="127.0.0.1", rpc_port=5565)
                         await harness.connect()
-                    
-                    # Fetch latest message watermark first to get recent messages
-                    latest_info = await harness.get_latest_ids()
-                    latest_id = latest_info.get("latest_message_id", 0)
-                    since_id = max(0, latest_id - 100)
 
-                    # Fetch ALL recent swarm messages across all agents (exact conversation)
-                    res = await harness.execute_in_swarm("swarm_read_messages", {
-                        "agent_id": "*",
-                        "since_id": since_id,
-                        "limit": 100
-                    })
-                    raw_msgs = res.get("messages", [])
-
-                    # Also fetch chat messages from swarm_dev
                     chat_msgs = await harness.chat_read("swarm_dev", limit=50)
-
-                    # Normalize and merge all messages
-                    merged = {}
-                    for m in raw_msgs:
-                        mid = m.get("id")
-                        merged[f"msg_{mid}"] = {
-                            "id": mid,
-                            "sender": m.get("sender", "Unknown"),
-                            "recipient": m.get("recipient", "*"),
-                            "message": m.get("message", ""),
-                            "data": m.get("data") or {},
-                            "timestamp": m.get("timestamp", 0)
-                        }
-
+                    merged = {f"msg_{m['id']}": m for m in swarm_msgs}
                     for c in chat_msgs:
                         cid = c.get("id") or c.get("timestamp")
                         key = f"chat_{cid}"
@@ -198,12 +232,7 @@ async def async_poller():
                                 "timestamp": c.get("timestamp", 0),
                                 "room": "swarm_dev"
                             }
-
                     swarm_msgs = sorted(merged.values(), key=lambda x: x.get("timestamp", 0))
-
-                    # Fetch operational logs
-                    logs = await harness.stream_agent_logs(limit=50)
-
                 except Exception:
                     if harness:
                         try:
@@ -218,6 +247,10 @@ async def async_poller():
                 state_cache["workflow"] = workflow
                 state_cache["telemetry"] = telemetry
                 state_cache["node_status"] = node_status
+                state_cache["stats"] = {
+                    "total_logs": total_logs_count,
+                    "total_messages": total_msgs_count
+                }
                 state_cache["last_update"] = time.time()
 
         except Exception:
@@ -252,7 +285,11 @@ class CockpitHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/" or self.path.startswith("/index.html"):
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+        query = urllib.parse.parse_qs(parsed.query)
+
+        if path == "/" or path.startswith("/index.html"):
             if not os.path.exists(HTML_FILE):
                 self.send_error(404, "cockpit_ui/index.html not found.")
                 return
@@ -265,13 +302,13 @@ class CockpitHandler(BaseHTTPRequestHandler):
             self.wfile.write(content)
             return
 
-        elif self.path == "/api/state":
+        elif path == "/api/state":
             with state_lock:
                 snapshot = dict(state_cache)
             self.send_json(snapshot)
             return
 
-        elif self.path == "/api/stream":
+        elif path == "/api/stream":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -291,10 +328,107 @@ class CockpitHandler(BaseHTTPRequestHandler):
                 return
             return
 
+        elif path == "/api/logs":
+            db_candidates = [
+                os.path.join(SCRIPT_DIR, "agy_nodeos.db"),
+                os.path.join(os.path.dirname(SCRIPT_DIR), "agy_nodeos.db")
+            ]
+            db_file = next((f for f in db_candidates if os.path.exists(f)), None)
+            if not db_file:
+                self.send_json({"total": 0, "logs": []})
+                return
+
+            try:
+                limit_raw = query.get("limit", ["200"])[0]
+                limit = 100000 if limit_raw.lower() in ("all", "0", "-1") else min(int(limit_raw), 5000)
+                offset = int(query.get("offset", ["0"])[0])
+            except Exception:
+                limit, offset = 200, 0
+
+            level = query.get("level", [""])[0].strip()
+            agent = query.get("agent", [""])[0].strip()
+            search = query.get("q", [""])[0].strip()
+            fmt = query.get("format", ["json"])[0].lower()
+            order = query.get("order", ["asc"])[0].lower()
+
+            try:
+                import sqlite3
+                conn = sqlite3.connect(db_file, timeout=5.0)
+                cur = conn.cursor()
+
+                where_clauses = []
+                params = []
+                if level and level.upper() != "ALL":
+                    where_clauses.append("log_level = ?")
+                    params.append(level.upper())
+                if agent and agent.lower() != "all":
+                    where_clauses.append("agent_id LIKE ?")
+                    params.append(f"%{agent}%")
+                if search:
+                    where_clauses.append("message LIKE ?")
+                    params.append(f"%{search}%")
+
+                where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+                cur.execute(f"SELECT count(*) FROM swarm_logs{where_sql}", params)
+                total_filtered = cur.fetchone()[0]
+
+                order_sql = "DESC" if order == "desc" else "ASC"
+                cur.execute(f"SELECT id, agent_id, log_level, message, timestamp FROM swarm_logs{where_sql} ORDER BY id {order_sql} LIMIT ? OFFSET ?", params + [limit, offset])
+                rows = cur.fetchall()
+                conn.close()
+
+                logs_result = [{
+                    "id": r[0],
+                    "agent_id": r[1],
+                    "log_level": r[2],
+                    "message": r[3],
+                    "timestamp": r[4]
+                } for r in rows]
+
+                if fmt == "csv":
+                    output = io.StringIO()
+                    writer = csv.writer(output)
+                    writer.writerow(["id", "agent_id", "log_level", "timestamp", "message"])
+                    for r in rows:
+                        writer.writerow([r[0], r[1], r[2], r[4], r[3]])
+                    csv_data = output.getvalue().encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/csv; charset=utf-8")
+                    self.send_header("Content-Disposition", 'attachment; filename="omniswarm_logs.csv"')
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.send_header("Content-Length", str(len(csv_data)))
+                    self.end_headers()
+                    self.wfile.write(csv_data)
+                    return
+
+                elif fmt == "export_json":
+                    export_body = json.dumps({"exported_at": time.time(), "total": total_filtered, "logs": logs_result}, indent=2).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_header("Content-Disposition", 'attachment; filename="omniswarm_logs.json"')
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.send_header("Content-Length", str(len(export_body)))
+                    self.end_headers()
+                    self.wfile.write(export_body)
+                    return
+
+                self.send_json({
+                    "total": total_filtered,
+                    "count": len(logs_result),
+                    "offset": offset,
+                    "limit": limit,
+                    "logs": logs_result
+                })
+                return
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
+                return
+
         else:
             self.send_error(404, "Not Found")
 
     def do_POST(self):
+        path = self.path.split('?')[0]
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length)
         try:
@@ -302,7 +436,7 @@ class CockpitHandler(BaseHTTPRequestHandler):
         except Exception:
             req_data = {}
 
-        if self.path == "/api/action":
+        if path == "/api/action":
             target = req_data.get("target", "PCAgent")
             message = req_data.get("message", "")
             data_payload = req_data.get("data", {})
@@ -322,7 +456,7 @@ class CockpitHandler(BaseHTTPRequestHandler):
                 self.send_json({"status": "error", "message": str(e)}, status=500)
             return
 
-        elif self.path == "/api/node/toggle":
+        elif path == "/api/node/toggle":
             action = req_data.get("action", "status")
             if sys.platform != "win32":
                 script = os.path.join(SCRIPT_DIR, "daemonize_phone.sh")
@@ -340,7 +474,7 @@ class CockpitHandler(BaseHTTPRequestHandler):
                 self.send_json({"status": "success", "message": f"Action {action} handled on PC"})
             return
 
-        elif self.path == "/api/node/endpoint":
+        elif path == "/api/node/endpoint":
             hub_host = req_data.get("hub_host")
             rpc_port = req_data.get("rpc_port")
             if hub_host and rpc_port:
@@ -353,7 +487,7 @@ class CockpitHandler(BaseHTTPRequestHandler):
                 self.send_json({"status": "error", "message": "Missing hub_host or rpc_port"}, status=400)
             return
 
-        elif self.path == "/api/remediate":
+        elif path == "/api/remediate":
             action_type = req_data.get("type", "")
             cmd = ""
             if action_type == "git_pull":
